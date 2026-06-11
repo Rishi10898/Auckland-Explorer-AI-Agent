@@ -1,0 +1,6 @@
+# Lists your Python dependencies
+fastapi==0.111.0
+uvicorn==0.30.1
+google-generativeai==0.7.0
+requests==2.32.3
+python-dotenv==1.0.1
