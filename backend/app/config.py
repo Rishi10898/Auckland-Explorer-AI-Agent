@@ -11,5 +11,6 @@ class Settings:
     ClaudAI_API_KEY: str = os.getenv("ClaudAI_API_KEY", "")
     DeepSeek_API_KEY: str = os.getenv("DeepSeek_API_KEY", "")
     grok_api_key: str = os.getenv("grok_api_key", "")
-
+    OPEN_WEATHER_API_KEY: str = os.getenv("OPEN_WEATHER_API_KEY", "")
+    TOMTOM_API_KEY: str = os.getenv("TOMTOM_API_KEY", "")
 settings = Settings()
