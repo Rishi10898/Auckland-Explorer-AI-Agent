@@ -1,48 +1,46 @@
 import requests
 from app.config import settings
 
-def get_auckland_places() -> dict:
+def get_auckland_places(target_category: str) -> dict:
     """
-    WHAT: Queries TomTom Category Search with an expanded scope of categories.
-    HOW: Sends an HTTP GET request containing parks, beaches, restaurants, malls, and hotels.
-    WHY: Expands the data pool so Gemini AI can choose from indoor OR outdoor options.
+    WHAT: Queries TomTom's Category Search API.
+    HOW: Translates the AI's strict keyword into a search term TomTom understands.
+    WHY: Resolves the empty list [] bug by aligning AI tokens with TomTom's database terms.
     """
     api_key = getattr(settings, "TOMTOM_API_KEY", None)
-    
     if not api_key:
-        return {"status": "error", "message": "TomTom API key is missing from configuration."}
+        return {"status": "error", "message": "TomTom API key is missing."}
 
-    # Central Auckland coordinates
+    # --- ADD THIS TRANSLATION DICTIONARY RIGHT HERE ---
+    # Maps our strict AI tokens to the best native TomTom search strings
+    tomtom_keyword_map = {
+        "BEACH": "beach",
+        "PARK_RECREATION_AREA": "park",  # Translates our long token to TomTom's preferred 'park'
+        "SHOPPING_CENTER": "shopping center",
+        "RESTAURANT": "restaurant",
+        "HOTEL_MOTEL": "hotel"
+    }
+    
+    # Get the translated search term (fallback to the original string if not found)
+    search_term = tomtom_keyword_map.get(target_category, target_category)
+
     lat = -36.8485
     lon = 174.7633
-    radius = 15000  # Bumped to 15km to catch large regional parks and destination malls
+    radius = 15000  # 15km search radius
     
-    # WHAT: An expanded comma-separated list of TomTom categories.
-    # WHY: Allows a single API call to gather a diverse mix of indoor and outdoor spots.
-    category_list = [
-        "BEACH",
-        "PARK_RECREATION_AREA",
-        "NATIONAL_PARK",
-        "NATURAL_FEATURE",
-        "SHOPPING_CENTER",
-        "RESTAURANT",
-        "HOTEL_MOTEL"
-    ]
-    category_query = ",".join(category_list)
-    
-    url = f"https://api.tomtom.com/search/2/categorySearch/{category_query}.json"
+    # Use the translated search_term in the URL instead of the strict AI token
+    url = f"https://api.tomtom.com/search/2/categorySearch/{search_term}.json"
     
     params = {
         "key": api_key,
         "lat": lat,
         "lon": lon,
         "radius": radius,
-        "limit": 10  # Increased to 10 so we get a good mix of different choices
+        "limit": 5
     }
 
     try:
         response = requests.get(url, params=params, timeout=10)
-        
         if response.status_code == 200:
             data = response.json()
             results = data.get("results", [])
@@ -53,13 +51,9 @@ def get_auckland_places() -> dict:
                 address = item.get("address", {})
                 position = item.get("position", {})
                 
-                # Get the specific classification string (e.g., "RESTAURANT" or "BEACH")
-                classifications = poi.get("classifications", [{}])
-                poi_type = classifications[0].get("code", "POINT_OF_INTEREST")
-                
                 clean_places.append({
                     "name": poi.get("name", "Unknown Location"),
-                    "category": poi_type,
+                    "category": target_category,
                     "formatted_address": address.get("freeformAddress", "Auckland, NZ"),
                     "distance_meters": item.get("distance", 0),
                     "latitude": position.get("lat"),
@@ -71,13 +65,7 @@ def get_auckland_places() -> dict:
                 "places": clean_places
             }
         else:
-            return {
-                "status": "error",
-                "message": f"TomTom API error code: {response.status_code}"
-            }
+            return {"status": "error", "message": f"TomTom error: {response.status_code}"}
             
     except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Network exception during TomTom lookup: {str(e)}"
-        }
+        return {"status": "error", "message": str(e)}
