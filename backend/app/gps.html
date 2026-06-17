@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPS Testing</title>
+</head>
+<body>
+    <button onclick="getUserLocation()">Test My Real Location</button>
+
+    <script>
+        function getUserLocation() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    alert(`Success!\nLatitude: ${lat}\nLongitude: ${lon}`);
+                },
+                (error) => {
+                    alert(`Location access denied: ${error.message}`);
+                }
+            );
+        }
+    </script>
+</body>
+</html>

@@ -1,7 +1,12 @@
+// understanding line by line of the code 
+// If I dont know or understand the code, search it or ask explanation to AI.
+// Rewrite the entire code by myself, with looking and based on my understanding of the code.
+// Encounter any errors repeat the above process.
 // Brendan Eich NetScape 
 // Javascript and Java are different languages
 // Javascript was created in 10 days
 // Any programming languages are to solve problems
+//python -m uvicorn app.main:app --reload
 console.log("Hello World");
 // Logical Operators
 <script>
