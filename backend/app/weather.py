@@ -1,4 +1,5 @@
 import requests
+from typing import Optional
 from app.config import settings
 
 def get_auckland_weather() -> dict:
@@ -108,3 +109,121 @@ def get_auckland_weather() -> dict:
             "status": "error",
             "message": f"An exception occurred during the weather request: {str(e)}"
         }
+def get_safeswim_status(lat: float, lon: float) -> dict:
+    """
+    WHAT: Provides the official Safeswim URL for live validation.
+    WHY: Ensures users get 100% accurate, authoritative data straight from the source.
+    """
+    return {
+        "safe_to_swim": "unknown",
+        "advice": "Please verify live water quality, real-time conditions, and active swim warnings directly on the official Safeswim map.",
+        "official_url": "https://www.safeswim.org.nz/"
+    }
+import httpx
+import asyncio
+from datetime import datetime, timedelta
+
+# --- IN-MEMORY CACHE STORAGE VARIABES ---
+# Updates globally every 35 minutes
+SAFESWIM_GLOBAL_LOCATIONS = []
+LAST_GLOBAL_REFRESH = None
+
+# Caches deep-dive beach profiles permanently (or monthly) once requested
+SAFESWIM_SPECIFIC_BEACH_CACHE = {}
+
+# Greater Auckland Bounding Box for filtering out-of-region entries
+MIN_LAT, MAX_LAT = -37.3000, -36.3000
+MIN_LON, MAX_LON = 174.2000, 175.3000
+
+async def update_safeswim_global_cache():
+    """
+    WHAT: Background worker task that fetches the raw Safeswim locations array.
+    HOW: Filters data down to Auckland-only boundaries and drops external records.
+    WHY: Keeps an up-to-date, zero-latency local variable cache ready for user requests.
+    """
+    global SAFESWIM_GLOBAL_LOCATIONS, LAST_GLOBAL_REFRESH
+    url = "https://safeswim.org.nz/api/locations"
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url, timeout=10.0)
+            if response.status_code == 200:
+                data = response.json()
+                all_locations = data.get("locations", [])
+                
+                auckland_only = []
+                for loc in all_locations:
+                    pos = loc.get("position")
+                    if not pos or len(pos) < 2:
+                        continue
+                    
+                    lat, lon = pos[0], pos[1]
+                    # Filter condition: Keep only locations within Greater Auckland coordinates
+                    if MIN_LAT <= lat <= MAX_LAT and MIN_LON <= lon <= MAX_LON:
+                        auckland_only.append(loc)
+                
+                SAFESWIM_GLOBAL_LOCATIONS = auckland_only
+                LAST_GLOBAL_REFRESH = datetime.now()
+                print(f"[{datetime.now()}] Safeswim local global variable synchronized. Cached {len(auckland_only)} Auckland locations.")
+        except Exception as e:
+            print(f"Error executing Safeswim background refresh sync worker task: {str(e)}")
+
+async def safeswim_background_scheduler():
+    """Loops indefinitely, executing the update task precisely every 35 minutes."""
+    while True:
+        await update_safeswim_global_cache()
+        await asyncio.sleep(35 * 60) # Sleep for 35 minutes
+
+async def fetch_specific_beach_profile(slug: str) -> dict:
+    """
+    WHAT: Looks up specific detailed information (facilities, descriptions) for a given beach identifier.
+    HOW: Uses an on-demand, write-through in-memory dictionary cache database layer.
+    """
+    global SAFESWIM_SPECIFIC_BEACH_CACHE
+    
+    # If the deep dive info was already fetched before, return it instantly
+    if slug in SAFESWIM_SPECIFIC_BEACH_CACHE:
+        return SAFESWIM_SPECIFIC_BEACH_CACHE[slug]
+        
+    url = f"https://safeswim.org.nz/api/locations/{slug}"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url, timeout=10.0)
+            if response.status_code == 200:
+                profile_data = response.json()
+                
+                # Extract clean indicators to pass along to our core search outputs
+                clean_profile = {
+                    "description": profile_data.get("description", ""),
+                    "hazards": [t.get("name") for t in profile_data.get("tags", []) if t.get("type") == "LOCATION_HAZARD"],
+                    "facilities": [t.get("name") for t in profile_data.get("tags", []) if t.get("type") == "LOCATION_FACILITY"]
+                }
+                
+                # Save data to local memory variable lookup matrix
+                SAFESWIM_SPECIFIC_BEACH_CACHE[slug] = clean_profile
+                return clean_profile
+        except Exception as e:
+            print(f"Failed to fetch beach metadata profile for {slug}: {str(e)}")
+            
+    return {"description": "Metadata offline.", "hazards": [], "facilities": []}
+
+def match_closest_auckland_beach(user_lat: float, user_lon: float) -> Optional[dict]:
+    """Calculates proximity against our filtered local variable list to isolate the closest spot.
+
+    Returns None when no cached Auckland locations are available yet.
+    """
+    if not SAFESWIM_GLOBAL_LOCATIONS:
+        return None
+        
+    closest_site = None
+    min_dist = float('inf')
+    
+    for loc in SAFESWIM_GLOBAL_LOCATIONS:
+        pos = loc.get("position")
+        b_lat, b_lon = pos[0], pos[1]
+        dist = (user_lat - b_lat)**2 + (user_lon - b_lon)**2
+        if dist < min_dist:
+            min_dist = dist
+            closest_site = loc
+            
+    return closest_site
