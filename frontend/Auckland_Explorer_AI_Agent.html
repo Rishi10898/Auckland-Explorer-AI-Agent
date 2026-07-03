@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auckland Explorer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
+  body { font-family: 'DM Sans', sans-serif; }
+  .mono { font-family: 'DM Mono', monospace; }
+  .pulse-dot { animation: pulse 1.5s cubic-bezier(.4,0,.6,1) infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .spinner { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  select option { background: #1e293b; color: #e2e8f0; }
+  .chip-btn:hover { background: #0e4f6b22; border-color: #0e4f6b; color: #0e4f6b; }
+  .fade-in { animation: fadeIn .4s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .section-divider { border: none; border-top: 1px dashed #cbd5e1; margin: 20px 0; }
+  .ai-bubble { background: linear-gradient(135deg, #f0f9fc 0%, #e8f5ec 100%); border-left: 3px solid #1a7da0; }
+  .budget-ok { background: #e8f5ec; border: 1px solid #1a6b3a33; color: #1a6b3a; }
+  .budget-warn { background: #fef3c7; border: 1px solid #d9770033; color: #92400e; }
+  .budget-over { background: #faeae6; border: 1px solid #c94c2e33; color: #c94c2e; }
+  details summary { cursor: pointer; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details[open] summary .chevron { transform: rotate(180deg); }
+  .chevron { transition: transform .2s; display: inline-block; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-family: 'DM Mono', monospace; font-weight: 500; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+<!-- HEADER -->
+<header class="bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between sticky top-0 z-50">
+  <div class="flex items-center gap-2">
+    <span class="text-xl">🌊</span>
+    <span class="font-semibold text-sm tracking-wide">Auckland Explorer</span>
+    <span class="mono text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full ml-2">HF · gpt-oss-120b</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <div id="geoDot" class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></div>
+    <span id="geoLabel" class="mono text-xs text-slate-400">Locating…</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-b border-slate-800 px-5 py-8 text-center">
+  <p class="mono text-xs text-blue-400 tracking-widest mb-2 uppercase">AI-powered · Auckland only</p>
+  <h1 class="text-2xl font-semibold mb-2">Find your perfect <span class="text-blue-400">escape</span></h1>
+  <p class="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">Tell the AI anything — your budget, how you're getting there, what vibe you're after. It cross-references weather, Safeswim water quality, and transit fares to give you a personalised recommendation.</p>
+</div>
+
+<!-- MAIN -->
+<main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
+
+  <!-- ══ QUERY FORM ══ -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+    <p class="mono text-xs text-slate-500 uppercase tracking-wider mb-4">What are you looking for?</p>
+
+    <!-- Row 1: Category + Budget + Concession type -->
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1.5">Category</label>
+        <select id="fCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 h-10 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="beach">🏖 Beach / swim</option>
+          <option value="park">🌿 National park</option>
+          <option value="coastal_walk">🚶 Coastal walk</option>
+          <option value="reserve">🌳 Local reserve</option>
+          <option value="restaurant">🍽 Restaurant</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1.5">Budget (NZD $)</label>
+        <input type="number" id="fBudget" placeholder="e.g. 10" min="0" step="1"
+          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 h-10 text-sm text-emerald-400 focus:outline-none focus:border-emerald-500 mono">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1.5">Fare type</label>
+        <select id="fFareType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 h-10 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+          <option value="adult">Adult</option>
+          <option value="tertiary">Tertiary / HOP</option>
+          <option value="child">Child (5–15)</option>
+          <option value="senior">Senior (free)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 2: Transport mode -->
+    <div class="mb-3">
+      <label class="block text-xs text-slate-400 mb-1.5">How are you getting there?</label>
+      <div class="grid grid-cols-4 gap-2" id="transportModes">
+        <button onclick="selectMode('bus')" data-mode="bus" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚌 Bus / Train</button>
+        <button onclick="selectMode('drive')" data-mode="drive" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚗 Drive</button>
+        <button onclick="selectMode('cycle')" data-mode="cycle" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚴 Cycle</button>
+        <button onclick="selectMode('walk')" data-mode="walk" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚶 Walk</button>
+      </div>
+    </div>
+
+    <!-- Row 3: Vibe freetext -->
+    <div class="mb-3">
+      <label class="block text-xs text-slate-400 mb-1.5">Your vibe — tell the AI anything</label>
+      <textarea id="fVibe" rows="2" placeholder="e.g. quiet sheltered beach, calm water for kids, don't want to walk far from the bus stop…"
+        class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"></textarea>
+    </div>
+
+    <!-- Vibe chips -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('calm sheltered swim, good for families')">Calm family swim</button>
+      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('dog friendly beach, off-leash area')">Dog friendly</button>
+      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('quiet hidden spot away from crowds')">Off the beaten track</button>
+      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('easy flat walk with good views')">Easy coastal walk</button>
+      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('patrolled beach, safe for swimming')">Patrolled and safe</button>
+      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('close to public transport, minimal walking')">Near public transport</button>
+    </div>
+
+    <button id="discoverBtn" onclick="runPhase1()" disabled
+      class="w-full h-11 rounded-xl bg-slate-700 text-slate-400 text-sm font-medium cursor-not-allowed transition">
+      Awaiting GPS fix…
+    </button>
+  </div>
+
+  <!-- ══ RESULTS ══ -->
+  <div id="resultsArea"></div>
+
+</main>
+
+<script>
+const API = 'http://127.0.0.1:8000';
+let userLat = null, userLon = null;
+let confirmedDest = null;
+let selectedMode = 'bus';
+
+// ── GEO ──
+function setGeo(state, label, lat, lon) {
+  document.getElementById('geoLabel').textContent = label;
+  const dot = document.getElementById('geoDot');
+  dot.className = 'w-2 h-2 rounded-full';
+  if (state === 'active') dot.classList.add('bg-emerald-400');
+  else if (state === 'error') dot.classList.add('bg-rose-400');
+  else { dot.classList.add('bg-amber-400', 'pulse-dot'); return; }
+  if (lat !== undefined) { userLat = lat; userLon = lon; }
+  const btn = document.getElementById('discoverBtn');
+  btn.disabled = false;
+  btn.className = 'w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold cursor-pointer transition';
+  btn.textContent = 'Find my perfect spot →';
+}
+
+navigator.geolocation
+  ? navigator.geolocation.getCurrentPosition(
+      p => setGeo('active', `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`, p.coords.latitude, p.coords.longitude),
+      () => setGeo('error', 'Using Auckland Central (fallback)', -36.8485, 174.7633)
+    )
+  : setGeo('error', 'Using Auckland Central (fallback)', -36.8485, 174.7633);
+
+// ── TRANSPORT MODE SELECT ──
+function selectMode(mode) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.remove('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
+    b.classList.add('border-slate-700', 'text-slate-300');
+  });
+  const active = document.querySelector(`[data-mode="${mode}"]`);
+  if (active) {
+    active.classList.add('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
+    active.classList.remove('border-slate-700', 'text-slate-300');
+  }
+}
+selectMode('bus');
+
+function addVibe(text) {
+  const v = document.getElementById('fVibe');
+  v.value = (v.value ? v.value + ', ' : '') + text;
+  v.focus();
+}
+
+// ── BUDGET ANALYSIS ──
+function analyzeBudget(budget, fareType, transitOptions) {
+  if (!budget || budget <= 0 || selectedMode !== 'bus') return null;
+  if (fareType === 'senior') return { status: 'ok', message: 'Free travel on AT with HOP card.' };
+
+  const cheapest = transitOptions.reduce((min, r) => {
+    const fare = r.fares?.[fareType] ?? r.fares?.adult ?? 3.00;
+    return fare < min ? fare : min;
+  }, Infinity);
+
+  if (cheapest === Infinity) return null;
+
+  const oneWay = cheapest;
+  const returnFare = oneWay * 2;
+  const remaining = budget - returnFare;
+
+  if (returnFare <= budget) {
+    return {
+      status: 'ok',
+      oneWay,
+      returnFare,
+      remaining: remaining.toFixed(2),
+      message: `$${oneWay.toFixed(2)} each way · $${returnFare.toFixed(2)} return · $${remaining.toFixed(2)} left for activities.`
+    };
+  } else if (oneWay <= budget) {
+    return {
+      status: 'warn',
+      oneWay,
+      returnFare,
+      message: `$${oneWay.toFixed(2)} one-way fits but you won't have enough for the return ($${returnFare.toFixed(2)}). Consider walking or cycling back, or adjust your budget.`
+    };
+  } else {
+    return {
+      status: 'over',
+      oneWay,
+      returnFare,
+      message: `AT fare ($${oneWay.toFixed(2)} one-way) exceeds your $${budget} budget. The AI will suggest free alternatives.`
+    };
+  }
+}
+
+// ── BUILD FULL AI CONTEXT ──
+function buildAIContext(data, budget, fareType, vibe, category, transportAnalysis) {
+  const w = data.live_auckland_weather || {};
+  const m = w.metrics || {};
+  const dest = data.recommended_place || {};
+  const sw = data.safeswim_environmental_report || {};
+  const transit = data.transit_options || [];
+
+  let ctx = `You are an Auckland local travel assistant. Analyse all the data below and give the user a clear, warm, practical recommendation in plain English. Be specific about costs, safety, and transport. Never mention internal system details.\n\n`;
+
+  ctx += `USER REQUEST:\n- Category: ${category}\n- Vibe: "${vibe}"\n- Budget: $${budget || 0} NZD\n- Fare type: ${fareType}\n- Transport mode: ${selectedMode}\n\n`;
+
+  if (w.status === 'success') {
+    ctx += `LIVE WEATHER (Auckland right now):\n- Condition: ${w.condition} – ${w.description}\n- Temperature: ${Math.round(m.temp_actual_celsius ?? 0)}°C (feels like ${Math.round(m.temp_feels_like_celsius ?? 0)}°C)\n- Humidity: ${m.humidity_percentage}%\n- Wind: ${(m.wind_speed_mps ?? 0).toFixed(1)} m/s\n- Active alerts: ${w.safety_warnings?.has_alerts ? 'YES — ' + JSON.stringify(w.safety_warnings.alerts_list) : 'None'}\n\n`;
+  }
+
+  if (dest.name) {
+    ctx += `AI-RECOMMENDED DESTINATION:\n- Name: ${dest.name}\n- Coordinates: ${dest.latitude}, ${dest.longitude}\n- AI reasoning so far: ${dest.ai_reasoning || 'None'}\n\n`;
+  }
+
+  if (sw.beach_name) {
+    ctx += `SAFESWIM WATER QUALITY:\n- Beach: ${sw.beach_name}\n- Water quality: ${sw.water_quality || 'UNKNOWN'}\n- Patrolled: ${sw.patrolled ? 'Yes' : 'No'}\n- Hazards: ${sw.active_hazards?.join(', ') || 'None reported'}\n- Facilities: ${sw.facilities_found?.join(', ') || 'Unknown'}\n\n`;
+  }
+
+  if (transit.length > 0) {
+    ctx += `AVAILABLE TRANSIT OPTIONS:\n`;
+    transit.forEach(r => {
+      const fare = r.fares?.[fareType] ?? r.fares?.adult;
+      ctx += `- ${r.mode} ${r.route_short_name}: ${r.origin_stop} → ${r.destination_stop} | ${r.duration_minutes} min | $${fare?.toFixed(2)} (${fareType}) | ${r.live_eta}\n`;
+    });
+    ctx += `\n`;
+  }
+
+  if (transportAnalysis) {
+    ctx += `BUDGET vs TRANSIT ANALYSIS:\n- Status: ${transportAnalysis.status.toUpperCase()}\n- ${transportAnalysis.message}\n\n`;
+    if (transportAnalysis.status !== 'ok') {
+      ctx += `IMPORTANT: Because the transit cost ${transportAnalysis.status === 'over' ? 'exceeds' : 'strains'} the budget, suggest free or low-cost travel alternatives such as: walking if distance is under 3km, cycling if available, driving if the user has a car. Ask the user which of these applies if unclear.\n\n`;
+    }
+  }
+
+  ctx += `YOUR TASK:\n1. Summarise whether today's weather and water conditions make this a good day to go.\n2. Confirm the recommended destination is the best choice given everything above — or suggest a better one if conditions are bad.\n3. Give a clear breakdown of the transport cost vs budget, and what the user can afford after fares.\n4. If the budget is tight or transport is unaffordable, ask whether the user has a car, bike, or can walk — and give a practical alternative plan.\n5. List any safety concerns (weather alerts, water quality, hazards).\n6. Give a final clear go/no-go recommendation with one actionable next step.\n\nRespond in friendly plain English, 150–220 words. Use short paragraphs. Do not use markdown headers or bullet lists — write as if you're a knowledgeable local friend texting advice.`;
+
+  return ctx;
+}
+
+// ── PHASE 1: DISCOVERY ──
+async function runPhase1() {
+  const budget = parseFloat(document.getElementById('fBudget').value) || 0;
+  const fareType = document.getElementById('fFareType').value;
+  const category = document.getElementById('fCategory').value;
+  const vibe = document.getElementById('fVibe').value || category;
+
+  document.getElementById('resultsArea').innerHTML = loadingHTML('Discovering your spot', [
+    'Fetching live Auckland weather',
+    'Querying nearby places (TomTom)',
+    'AI destination matching (HF · gpt-oss-120b)',
+    'Loading Safeswim water quality'
+  ]);
+
+  try {
+    const [recRes, transitRes] = await Promise.all([
+      fetch(`${API}/api/recommend?budget=${budget}&vibe=${encodeURIComponent(vibe)}&lat=${userLat}&lon=${userLon}`),
+      fetch(`${API}/api/transit-tracking?user_lat=${userLat}&user_lon=${userLon}&dest_lat=${userLat}&dest_lon=${userLon}`)
+    ]);
+
+    if (!recRes.ok) throw new Error(`Recommend API: ${recRes.status}`);
+    const data = await recRes.json();
+    const transitData = transitRes.ok ? await transitRes.json() : { transit_options: [] };
+    data.transit_options = transitData.transit_options || [];
+
+    const transportAnalysis = analyzeBudget(budget, fareType, data.transit_options);
+
+    // Now call the AI synthesis layer with ALL context
+    const aiSynthesis = await callAISynthesis(data, budget, fareType, vibe, category, transportAnalysis);
+    data.ai_synthesis = aiSynthesis;
+    data._budget = budget;
+    data._fareType = fareType;
+    data._transportAnalysis = transportAnalysis;
+
+    renderPhase1(data);
+  } catch(e) {
+    document.getElementById('resultsArea').innerHTML = errorHTML(e.message);
+  }
+}
+
+// ── CALL HF AI FOR SYNTHESIS ──
+async function callAISynthesis(data, budget, fareType, vibe, category, transportAnalysis) {
+  try {
+    const hfPrompt = buildAIContext(data, budget, fareType, vibe, category, transportAnalysis);
+    const res = await fetch(`${API}/api/ai-synthesis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: hfPrompt })
+    });
+    if (res.ok) {
+      const d = await res.json();
+      return d.synthesis || null;
+    }
+  } catch(e) {
+    console.warn('AI synthesis fallback:', e);
+  }
+  // Graceful fallback — assemble a basic summary from the data
+  const w = data.live_auckland_weather?.metrics;
+  const dest = data.recommended_place;
+  const sw = data.safeswim_environmental_report;
+  const ta = transportAnalysis;
+  let msg = '';
+  if (dest?.name) msg += `Based on your vibe, ${dest.name} looks like a great match. `;
+  if (w) msg += `It's ${Math.round(w.temp_actual_celsius)}°C in Auckland right now. `;
+  if (sw?.water_quality) msg += `Water quality is ${sw.water_quality}. `;
+  if (ta) msg += ta.message;
+  return msg || 'AI synthesis unavailable — check your backend is running.';
+}
+
+// ── RENDER PHASE 1 ──
+function renderPhase1(data) {
+  const w = data.live_auckland_weather || {};
+  const dest = data.recommended_place || {};
+  const sw = data.safeswim_environmental_report || {};
+  const transit = data.transit_options || [];
+  const ta = data._transportAnalysis;
+  const fareType = data._fareType || 'adult';
+  const budget = data._budget || 0;
+  const m = w.metrics || {};
+  const quality = (sw.water_quality || 'UNKNOWN').toUpperCase();
+
+  confirmedDest = dest;
+
+  let html = '';
+
+  // ── AI SYNTHESIS BUBBLE ──
+  if (data.ai_synthesis) {
+    html += `<div class="ai-bubble rounded-2xl p-5 mb-4 fade-in">
+      <p class="text-xs mono text-slate-500 mb-2 uppercase tracking-wider">AI analysis · gpt-oss-120b via Hugging Face</p>
+      <p class="text-sm text-slate-700 leading-relaxed">${data.ai_synthesis}</p>
+    </div>`;
+  }
+
+  // ── WEATHER STRIP ──
+  if (w.status === 'success') {
+    const alertBg = w.safety_warnings?.has_alerts ? 'bg-red-900/30 border-red-700' : 'bg-slate-900 border-slate-800';
+    html += `<div class="rounded-xl border ${alertBg} px-4 py-3 flex flex-wrap items-center gap-4 mb-4 fade-in">
+      <div>
+        <div class="text-2xl font-semibold">${Math.round(m.temp_actual_celsius ?? 0)}°C</div>
+        <div class="text-xs text-slate-400">${w.description || w.condition}</div>
+      </div>
+      <div class="flex gap-4 ml-auto flex-wrap">
+        <div class="mono text-xs text-slate-400">Feels like <span class="text-slate-200">${Math.round(m.temp_feels_like_celsius ?? 0)}°C</span></div>
+        <div class="mono text-xs text-slate-400">Humidity <span class="text-slate-200">${m.humidity_percentage}%</span></div>
+        <div class="mono text-xs text-slate-400">Wind <span class="text-slate-200">${(m.wind_speed_mps ?? 0).toFixed(1)} m/s</span></div>
+      </div>
+      ${w.safety_warnings?.has_alerts ? `<div class="w-full text-xs text-red-300 mt-1">⚠ Active weather alert — check MetService before heading out.</div>` : ''}
+    </div>`;
+  }
+
+  // ── DESTINATION CARD ──
+  if (dest.name) {
+    const swClass = quality === 'GREEN' || quality === 'GOOD' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : quality === 'RED' || quality === 'POOR' ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                  : 'bg-slate-700 text-slate-400 border-slate-600';
+
+    html += `<div class="bg-slate-900 border-2 border-blue-600/60 rounded-2xl overflow-hidden mb-4 fade-in">
+      <div class="bg-blue-900/60 px-5 py-3 flex items-start justify-between">
+        <div>
+          <h2 class="font-semibold text-lg">${dest.name}</h2>
+          <p class="mono text-xs text-slate-400 mt-0.5">${(dest.latitude||'').toString().slice(0,9)}, ${(dest.longitude||'').toString().slice(0,9)}</p>
+        </div>
+        <div class="flex gap-2 flex-wrap mt-1">
+          ${sw.patrolled ? `<span class="tag bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🏊 Patrolled</span>` : ''}
+          ${quality !== 'UNKNOWN' ? `<span class="tag border ${swClass}">Water: ${quality}</span>` : ''}
+        </div>
+      </div>
+
+      ${dest.ai_reasoning ? `<div class="px-5 pt-4 pb-1">
+        <p class="text-sm text-slate-300 italic leading-relaxed border-l-2 border-blue-500 pl-3">${dest.ai_reasoning}</p>
+      </div>` : ''}
+
+      <!-- Safeswim detail -->
+      ${sw.beach_name ? `<div class="px-5 py-3 border-t border-slate-800">
+        <p class="mono text-xs text-slate-500 mb-2 uppercase tracking-wider">💧 Safeswim — ${sw.beach_name}</p>
+        ${sw.description ? `<p class="text-xs text-slate-400 leading-relaxed mb-2">${sw.description}</p>` : ''}
+        ${sw.active_hazards?.length ? `<p class="text-xs text-amber-400 mb-2">⚠ Hazards: ${sw.active_hazards.join(', ')}</p>` : ''}
+        ${sw.facilities_found?.length ? `<div class="flex flex-wrap gap-1.5">${sw.facilities_found.map(f=>`<span class="tag bg-slate-800 text-slate-400 border border-slate-700">${f}</span>`).join('')}</div>` : ''}
+        <a href="https://safeswim.org.nz" target="_blank" rel="noopener"
+          class="inline-flex items-center gap-1.5 mt-3 text-xs text-blue-400 hover:text-blue-300 transition mono">
+          🔗 View live conditions on Safeswim.org.nz ↗
+        </a>
+      </div>` : ''}
+    </div>`;
+  }
+
+  // ── BUDGET ANALYSIS CARD ──
+  if (ta && selectedMode === 'bus') {
+    const cls = ta.status === 'ok' ? 'budget-ok' : ta.status === 'warn' ? 'budget-warn' : 'budget-over';
+    const icon = ta.status === 'ok' ? '✓' : ta.status === 'warn' ? '⚠' : '✗';
+    html += `<div class="${cls} rounded-xl px-4 py-3 mb-4 fade-in">
+      <p class="text-xs font-semibold mono uppercase tracking-wider mb-1">${icon} Budget check · ${data._fareType} fare</p>
+      <p class="text-sm leading-relaxed">${ta.message}</p>
+      ${ta.status !== 'ok' ? `<p class="text-xs mt-2 opacity-75">Does the AI need to suggest walking, cycling, or driving instead? Update your transport mode above and re-search.</p>` : ''}
+    </div>`;
+  }
+
+  // ── TRANSIT OPTIONS ──
+  if (transit.length > 0) {
+    html += `<details class="bg-slate-900 border border-slate-800 rounded-2xl mb-4 fade-in" open>
+      <summary class="px-5 py-4 flex items-center justify-between">
+        <span class="mono text-xs text-slate-400 uppercase tracking-wider">🚌 Transit options</span>
+        <span class="chevron text-slate-500 text-sm">▾</span>
+      </summary>
+      <div class="px-5 pb-4 space-y-3 border-t border-slate-800 pt-4">`;
+
+    transit.forEach(r => {
+      const fare = r.fares?.[fareType] ?? r.fares?.adult ?? 3.00;
+      const returnFare = fare * 2;
+      const budgetOk = budget <= 0 || returnFare <= budget;
+      html += `<div class="bg-slate-800/60 border border-slate-700 rounded-xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="tag bg-blue-900/60 text-blue-300 border border-blue-700/40">${r.mode} · ${r.route_short_name}</span>
+          <span class="mono text-xs text-slate-400">${r.live_eta || ''}</span>
+        </div>
+        <p class="text-xs text-slate-300 mb-2">${r.origin_stop} → ${r.destination_stop}</p>
+        <div class="flex flex-wrap gap-3 items-center">
+          <span class="mono text-xs text-slate-400">$${fare.toFixed(2)} one-way</span>
+          <span class="mono text-xs text-slate-400">$${returnFare.toFixed(2)} return</span>
+          <span class="mono text-xs text-slate-400">${r.duration_minutes} min · ${r.walking_distance_meters}m walk</span>
+          ${!budgetOk && budget > 0 ? `<span class="tag bg-red-900/40 text-red-300 border border-red-700/30">Over budget</span>` : ''}
+        </div>
+      </div>`;
+    });
+
+    // AT Journey Planner link
+    const destEncoded = dest.name ? encodeURIComponent(dest.name + ', Auckland') : '';
+    const atUrl = destEncoded
+      ? `https://at.govt.nz/bus-train-ferry/journey-planner/#to=${destEncoded}`
+      : 'https://at.govt.nz/bus-train-ferry/journey-planner/';
+
+    html += `<div class="mt-3 p-3 bg-blue-950/40 border border-blue-800/40 rounded-xl">
+        <p class="text-xs text-slate-400 mb-2">For live schedules, real-time tracking, and HOP fares — use the official AT Journey Planner:</p>
+        <a href="${atUrl}" target="_blank" rel="noopener"
+          class="inline-flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-300 transition mono">
+          🚌 Open AT Journey Planner for ${dest.name || 'your destination'} ↗
+        </a>
+        <p class="text-xs text-slate-500 mt-2">AT Journey Planner gives real-time bus/train tracking, exact stop locations, and HOP card fares — more accurate than the mock data above.</p>
+      </div>
+      </div>
+    </details>`;
+  }
+
+  // ── CONFIRM BUTTON ──
+  if (dest.name) {
+    html += `<button onclick="runPhase2()" class="w-full h-11 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition fade-in">
+      ✓ Confirm ${dest.name} — get full transit tracking
+    </button>`;
+  }
+
+  document.getElementById('resultsArea').innerHTML = html;
+}
+
+// ── PHASE 2: TRANSIT TRACKING ──
+async function runPhase2() {
+  if (!confirmedDest?.latitude) return;
+  const fareType = document.getElementById('fFareType').value;
+
+  const el = document.createElement('div');
+  el.id = 'phase2Area';
+  el.className = 'mt-4';
+  el.innerHTML = loadingHTML('Phase 2 — live transit tracking', ['Connecting to Auckland Transport', 'Calculating routes to ' + confirmedDest.name]);
+  document.getElementById('resultsArea').appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const res = await fetch(`${API}/api/transit-tracking?user_lat=${userLat}&user_lon=${userLon}&dest_lat=${confirmedDest.latitude}&dest_lon=${confirmedDest.longitude}`);
+    if (!res.ok) throw new Error(`Transit API: ${res.status}`);
+    const data = await res.json();
+    const budget = parseFloat(document.getElementById('fBudget').value) || 0;
+    renderPhase2(el, data, fareType, budget);
+  } catch(e) {
+    el.innerHTML = errorHTML(e.message);
+  }
+}
+
+function renderPhase2(el, data, fareType, budget) {
+  const routes = data.transit_options || [];
+  const destEncoded = confirmedDest?.name ? encodeURIComponent(confirmedDest.name + ', Auckland') : '';
+  const atUrl = destEncoded
+    ? `https://at.govt.nz/bus-train-ferry/journey-planner/#to=${destEncoded}`
+    : 'https://at.govt.nz/bus-train-ferry/journey-planner/';
+
+  let html = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 fade-in">
+    <p class="mono text-xs text-slate-400 uppercase tracking-wider mb-4">Phase 2 — confirmed transit to ${confirmedDest?.name || 'destination'}</p>`;
+
+  if (!routes.length) {
+    html += `<p class="text-sm text-slate-400">No AT routes found. Use the AT Journey Planner below for live results.</p>`;
+  } else {
+    routes.forEach(r => {
+      const fare = r.fares?.[fareType] ?? r.fares?.adult ?? 3.00;
+      const returnFare = fare * 2;
+      const over = budget > 0 && returnFare > budget;
+      html += `<div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-3">
+        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <span class="tag bg-blue-900/60 text-blue-300 border border-blue-700/40 text-xs">${r.mode} · ${r.route_short_name}</span>
+          <span class="mono text-xs text-emerald-400">${r.live_eta}</span>
+        </div>
+        <p class="text-sm text-slate-200 font-medium mb-1">${r.origin_stop}</p>
+        <p class="text-xs text-slate-500 mb-2">→ ${r.destination_stop}</p>
+        <div class="grid grid-cols-2 gap-2 text-xs mono text-slate-400">
+          <span>One-way: <span class="text-slate-200">$${fare.toFixed(2)}</span></span>
+          <span>Return: <span class="${over ? 'text-red-400' : 'text-slate-200'}">$${returnFare.toFixed(2)} ${over ? '⚠ over budget' : ''}</span></span>
+          <span>Duration: <span class="text-slate-200">${r.duration_minutes} min</span></span>
+          <span>Walk to stop: <span class="text-slate-200">${r.walking_distance_meters}m</span></span>
+        </div>
+        ${Object.keys(r.fares || {}).length > 1 ? `<div class="mt-2 pt-2 border-t border-slate-700 flex flex-wrap gap-3">
+          ${Object.entries(r.fares).map(([k,v]) => v === 0
+            ? `<span class="mono text-xs text-emerald-400">${k}: Free</span>`
+            : `<span class="mono text-xs text-slate-400">${k}: $${v.toFixed(2)}</span>`
+          ).join('')}
+        </div>` : ''}
+      </div>`;
+    });
+  }
+
+  html += `<div class="mt-4 p-4 bg-blue-950/40 border border-blue-800/40 rounded-xl">
+    <p class="text-xs text-slate-300 font-medium mb-1">Get live schedules and real-time tracking</p>
+    <p class="text-xs text-slate-500 mb-3">The AT Journey Planner shows exact departure times, platform numbers, and real-time bus GPS location. More accurate than the estimates above.</p>
+    <a href="${atUrl}" target="_blank" rel="noopener"
+      class="block w-full text-center py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition">
+      Open AT Journey Planner ↗
+    </a>
+  </div>`;
+
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+// ── UTILS ──
+function loadingHTML(title, steps) {
+  const items = steps.map((s, i) =>
+    `<li class="flex items-center gap-2 text-xs text-slate-400">
+      <div class="w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-blue-400 pulse-dot' : 'bg-slate-600'}"></div>${s}
+    </li>`
+  ).join('');
+  return `<div class="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-8 text-center">
+    <div class="spinner w-7 h-7 border-2 border-slate-700 border-t-blue-400 rounded-full mx-auto mb-4"></div>
+    <p class="text-sm font-medium text-slate-300 mb-4">${title}</p>
+    <ul class="space-y-2 text-left max-w-xs mx-auto">${items}</ul>
+  </div>`;
+}
+
+function errorHTML(msg) {
+  return `<div class="bg-red-950/40 border border-red-800 rounded-xl p-4 text-sm text-red-300">
+    <p class="font-medium mb-1">⚠ Backend error</p>
+    <p class="text-xs opacity-75">${msg}</p>
+    <p class="text-xs opacity-60 mt-2">Make sure <code>uvicorn app.main:app --reload</code> is running on port 8000.</p>
+  </div>`;
+}
+</script>
+</body>
+</html>
