@@ -15,4 +15,5 @@ class Settings:
     TOMTOM_API_KEY: str = os.getenv("TOMTOM_API_KEY", "")
     OLLAMA_API_KEY: str = os.getenv("OLLAMA_API_KEY", "")
     AT_API_KEY: str = os.getenv("AT_API_KEY", "")
+    HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
 settings = Settings()

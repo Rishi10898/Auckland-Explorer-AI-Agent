@@ -1,7 +1,7 @@
 """Auckland Explorer API entrypoint.
 
-Provides live weather, AI category decision filtering, Safeswim water 
-quality reports, and Auckland Transport multi-modal route tracking.
+Provides live weather, cloud-hosted AI recommendations via gpt-oss-120b, 
+Safeswim water quality reports, and explicit secondary route telemetry tracking.
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,26 +9,32 @@ from contextlib import asynccontextmanager
 from typing import Optional
 import asyncio
 
+from app.ai import get_cloud_destination_match, get_ai_synthesis
+from pydantic import BaseModel
+
+class SynthesisRequest(BaseModel):
+    prompt: str
+
+# Clean, singular import architecture mapping directly to your modules
+from app.places import get_auckland_places
+from app.transport import get_transit_options
 from app.weather import (
     get_auckland_weather, 
     safeswim_background_scheduler, 
     match_closest_auckland_beach, 
     fetch_specific_beach_profile
 )
-from app.ai import get_ai_decision
-from app.places import get_auckland_places
-# Import our new transport service module layer
-from app.transport import get_transit_options
 
 # --- START UP / SHUTDOWN LIFESPAN MANAGEMENT ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Fire up background scheduler task task immediately on boot loop execution
+    # Fire up background scheduler task immediately on boot loop execution
     bg_task = asyncio.create_task(safeswim_background_scheduler())
     yield
-    bg_task.cancel() # Clean up resource when server exits gracefully
+    bg_task.cancel()  # Clean up resource when server exits gracefully
 
 app = FastAPI(lifespan=lifespan)
+__all__ = ["app"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,6 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- PHASE 1: CHAT DISCOVERY & CLOUD AI RECOMMENDATION ---
 @app.get("/api/recommend")
 async def get_recommendation(
     budget: float = 0.0, 
@@ -52,41 +59,36 @@ async def get_recommendation(
     if not (MIN_LAT <= lat <= MAX_LAT and MIN_LON <= lon <= MAX_LON):
         raise HTTPException(status_code=400, detail="Access Denied: Area outside Greater Auckland region.")
     
-    # 2. Extract context parameters
+    # 2. Extract context parameters & weather matching
     weather_data = get_auckland_weather()
-    weather_condition = weather_data.get("condition", "Clouds")
     
-    ai_chosen_category = get_ai_decision(user_budget=budget, weather_condition=weather_condition, user_vibe=vibe)
+    # Intelligently route broad categories to keep TomTom places queries optimized
+    vibe_lower = vibe.lower()
+    ai_chosen_category = "BEACH" if "beach" in vibe_lower or "swim" in vibe_lower else "PARK"
+    
+    # Fetch real nearby location options relative to user's real GPS positioning
     live_places = get_auckland_places(target_category=ai_chosen_category, lat=lat, lon=lon)
+    places_list = live_places.get("places", [])
     
-    # 3. Process Dynamic Safeswim Integration Pipeline
+    if not places_list:
+        raise HTTPException(status_code=404, detail="No matching places found near your coordinates.")
+
+    # 3. Call your Cloud Model (gpt-oss-120b) to match the vibe string to the best physical option
+    recommended_destination = get_cloud_destination_match(user_vibe=vibe, nearby_places=places_list)
+
+    # 4. Process Safeswim Protection Layer data points
     safeswim_report = {
         "status": "Skipped",
         "message": f"Environmental tracking is not active for category: {ai_chosen_category}"
     }
     
     if ai_chosen_category == "BEACH":
-        matched_beach = None
+        matched_beach = match_closest_auckland_beach(
+            recommended_destination.get("latitude", lat), 
+            recommended_destination.get("longitude", lon)
+        )
         
-        if destination_name:
-            from app.weather import SAFESWIM_GLOBAL_LOCATIONS
-            normalized_search = destination_name.lower().strip()
-            for loc in SAFESWIM_GLOBAL_LOCATIONS:
-                if normalized_search in loc.get("name", "").lower():
-                    matched_beach = loc
-                    break
-        
-        if not matched_beach:
-            matched_beach = match_closest_auckland_beach(lat, lon)
-        
-        is_close_match = False
         if matched_beach:
-            pos = matched_beach.get("position", [0, 0])
-            approx_dist = (lat - pos[0])**2 + (lon - pos[1])**2
-            if approx_dist < 0.0025:  
-                is_close_match = True
-
-        if matched_beach and is_close_match:
             slug = matched_beach.get("slug")
             state = matched_beach.get("state", {})
             
@@ -101,53 +103,31 @@ async def get_recommendation(
                     "facilities_found": detailed_info.get("facilities"),
                     "active_hazards": detailed_info.get("hazards")
                 }
-            else:
-                safeswim_report = {
-                    "source": "Local System Guard",
-                    "beach_name": matched_beach.get("name"),
-                    "water_quality": state.get("quality", "UNKNOWN"),
-                    "patrolled": matched_beach.get("patrolled", False),
-                    "description": "Live status verified. Detailed profile data adjusting.",
-                    "facilities_found": ["Ocean Access"],
-                    "active_hazards": ["General Coastal Water Hazards"]
-                }
-        else:
-            safeswim_report = {
-                "source": "Local System Guard",
-                "beach_name": "Local Coastal Area",
-                "water_quality": "UNMONITORED",
-                "patrolled": False,
-                "description": "This coastal spot or recreation area is not actively tracked on the Safeswim network.",
-                "facilities_found": ["Scenic Viewpoint", "Walking Path"],
-                "active_hazards": ["Unmonitored Open Water"]
-            }
-# 4. Process Dynamic Auckland Transport Route Generation Pipeline
-    dest_lat, dest_lon = lat, lon
-    places_list = live_places.get("places", [])
-    if places_list:
-        dest_lat = places_list[0].get("latitude", lat)
-        dest_lon = places_list[0].get("longitude", lon)
 
-    transit_options = await get_transit_options(
-        user_lat=lat, 
-        user_lon=lon, 
-        dest_lat=dest_lat, 
-        dest_lon=dest_lon
-    )
-
-    # 5. NEW: Let the AI evaluate the transit trade-offs
-    from app.ai import analyze_transit_options_with_ai
-    transit_analysis = analyze_transit_options_with_ai(transit_options, vibe)
-
-    # 6. Compile final aggregate payload map
+    # Notice: Transit options are NOT fetched here. Phase 1 remains light, fast, and secure.
     return {
         "status": "success",
         "live_auckland_weather": weather_data,
-        "ai_engine_decision": {
-            "selected_category": ai_chosen_category,
-            "transit_recommendation": transit_analysis  # Adds the AI's smart pick here
-        },
-        "safeswim_environmental_report": safeswim_report,
-        "live_auckland_places": live_places,
-        "at_transit_options": transit_options
+        "category": ai_chosen_category,
+        "recommended_place": recommended_destination,
+        "safeswim_environmental_report": safeswim_report
+    }
+
+
+# --- PHASE 2: TELEMETRY TRACKING ON CONFIRMATION ---
+@app.get("/api/transit-tracking")
+async def get_live_tracking(user_lat: float, user_lon: float, dest_lat: float, dest_lon: float):
+    """
+    Fired strictly when the user clicks 'Confirm Destination' in your chat app.
+    Connects to the Auckland Transport pipeline to extract true live statuses.
+    """
+    transit_options = await get_transit_options(
+        user_lat=user_lat, 
+        user_lon=user_lon, 
+        dest_lat=dest_lat, 
+        dest_lon=dest_lon
+    )
+    return {
+        "status": "tracking",
+        "transit_options": transit_options
     }

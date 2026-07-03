@@ -1,95 +1,114 @@
-#Ollama API connection code
+import os
+import json
+from openai import OpenAI
+from app.config import settings
 
-from langchain_community.llms import Ollama
-from langchain_core.prompts import ChatPromptTemplate
-
-def get_ai_decision(user_budget: float, weather_condition: str, user_vibe: str) -> str:
+def get_cloud_destination_match(user_vibe: str, nearby_places: list) -> dict:
     """
-    WHAT: Connects our app metrics to our local Gemma model using LangChain.
-    HOW: Chains a ChatPromptTemplate directly into the Ollama gemma2:2b instance.
-    WHY: Uses industry-standard tooling to enforce strict categorical routing.
+    Uses OpenAI's gpt-oss-120b hosted serverless on Hugging Face to match
+    the user's vibe to a specific physical location.
     """
-    
-    # 1. Instantiate your newly installed lightweight Gemma model via LangChain
-    llm = Ollama(model="gemma2:2b")
-    
-    # 2. Build a structured System + User prompt layout
-    prompt_template = ChatPromptTemplate.from_messages([
-        (
-            "system",
-            "You are the core routing engine for an Auckland Explorer App.\n"
-            "Your job is to look at the user's situation and pick the SINGLE best search category keyword.\n\n"
-            "CRITICAL RULES:\n"
-            "1. You must reply with ONLY one of these exact words: BEACH, PARK_RECREATION_AREA, SHOPPING_CENTER, RESTAURANT, HOTEL_MOTEL.\n"
-            "2. Do NOT include any intro text, explanations, markdown formatting, or punctuation.\n"
-            "3. If it is raining or stormy, lean heavily toward indoor options like SHOPPING_CENTER or RESTAURANT."
-        ),
-        (
-            "user",
-            "Current Conditions:\n"
-            "- User Vibe/Intent: \"{vibe}\"\n"
-            "- Live Auckland Weather: \"{weather}\"\n"
-            "- User Budget: ${budget}\n\n"
-            "Category:"
-        )
-    ])
-    
-    # 3. Chain them together using LangChain's native pipe (|) syntax
-    chain = prompt_template | llm
+    hf_token = getattr(settings, "HUGGINGFACE_API_KEY", None)
+    if not hf_token:
+        # Safety fallback if token isn't initialized
+        return nearby_places[0] if nearby_places else {}
 
+    # 1. Initialize the OpenAI client pointing to the Hugging Face Router
+    client = OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=hf_token
+    )
+
+    # 2. Build our available geographic options context string
+    places_context = ""
+    for idx, p in enumerate(nearby_places):
+        places_context += f"- Option Name: {p['name']} (Lat: {p['latitude']}, Lon: {p['longitude']})\n"
+
+    # 3. Request completion using gpt-oss-120b via one of its ultra-fast inference providers (like fireworks-ai)
     try:
-        # Invoke the chain, passing our live variables into the brackets
-        raw_response = chain.invoke({
-            "vibe": user_vibe,
-            "weather": weather_condition,
-            "budget": user_budget
-        })
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b:fireworks-ai",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a local Auckland Travel Assistant agent. Your job is to pick the single BEST "
+                        "destination from the provided options that matches the user's vibe. "
+                        "You MUST respond ONLY with a raw JSON object string. Do not write markdown blocks (like ```json), "
+                        "do not write pleasantries. Strictly follow this output schema structure:\n"
+                        "{\n"
+                        '  "name": "The chosen place name",\n'
+                        '  "latitude": chosen_lat_float,\n'
+                        '  "longitude": chosen_lon_float,\n'
+                        '  "ai_reasoning": "A concise, engaging 2-sentence explanation of why this spot perfectly fits their vibe."\n'
+                        "}"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"User vibe preference: '{user_vibe}'.\nAvailable Options:\n{places_context}"
+                }
+            ],
+            temperature=0.1
+        )
+
+        # 4. Extract and clean the generated string message content text
+        raw_content = (response.choices[0].message.content or "").strip()
         
-        # Clean up any accidental trailing spaces or newlines
-        decision = raw_response.strip()
-        
-        # Validation safety guard check
-        valid_categories = ["BEACH", "PARK_RECREATION_AREA", "SHOPPING_CENTER", "RESTAURANT", "HOTEL_MOTEL"]
-        if decision not in valid_categories:
-            print(f"Gemma outputted an invalid category: '{decision}'. Falling back to default.")
-            return "PARK_RECREATION_AREA"
-            
-        return decision
+        # Clean up code blocks if the model wrapped it anyway
+        if "```json" in raw_content:
+            raw_content = raw_content.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw_content:
+            raw_content = raw_content.split("```")[1].split("```")[0].strip()
+
+        return json.loads(raw_content)
 
     except Exception as e:
-        print(f"LangChain execution error: {str(e)}")
-        return "PARK_RECREATION_AREA"
-def analyze_transit_options_with_ai(transit_options: list, user_vibe: str) -> dict:
+        print(f"GPT-OSS-120b Router Fallback Triggered: {e}")
+        # Default safe object fallback state structure if parsing hits an error boundary
+        return nearby_places[0] if nearby_places else {}
+def get_ai_synthesis(full_prompt: str) -> str:
     """
-    Processes real transit alternatives based on location awareness.
+    Sends the fully assembled context (weather + places + safeswim +
+    budget analysis + transit fares) to gpt-oss-120b via Hugging Face
+    and returns a plain-English synthesis for the user.
+
+    HOW THE AI IS ACCESSED:
+    - Client: openai Python SDK (pip install openai)
+    - base_url: https://router.huggingface.co/v1  ← Hugging Face Inference Router
+    - api_key:  your HUGGINGFACE_API_KEY from .env
+    - model:    openai/gpt-oss-120b:fireworks-ai
+      - This is OpenAI's gpt-oss-120b model
+      - Hosted serverlessly by Hugging Face
+      - Routed through Fireworks AI as the inference backend
+      - Billed to your Hugging Face account (not OpenAI directly)
     """
-    vibe_lower = user_vibe.lower()
-    
-    # If the user asks "why" or "what is" a specific transit line, handle it contextually
-    if "why" in vibe_lower:
-        reasoning = (
-            "Because you are out west near Pasadena/Ponsonby, taking the OuterLink bus directly to "
-            "Point Chevalier Beach keeps you local. It eliminates the need to travel all the way downtown "
-            "to catch an unnecessary ferry across to Devonport."
-        )
-        return {"recommended_option_index": 0, "ai_transit_reasoning": reasoning}
-        
-    if "ferry" in vibe_lower or "what is" in vibe_lower:
-        reasoning = (
-            "The DEV Ferry crosses the Waitematā Harbour to Devonport. However, since your current GPS "
-            "places you around Pasadena and Point Chev, you shouldn't take it! You have Point Chevalier Beach "
-            "right down the road via the OuterLink or 101 bus lines."
-        )
-        return {"recommended_option_index": 0, "ai_transit_reasoning": reasoning}
+    import json
+    from openai import OpenAI
+    from app.config import settings
 
-    # Primary search logic based on initial layout choices
-    if "short" in vibe_lower or "least walking" in vibe_lower:
-        if any(o["route_short_name"] == "OuterLink" for o in transit_options):
-            reasoning = "Since you are near Pasadena, take the OuterLink Bus toward Coyle Park. It drops you off just 180 meters from Point Chevalier Beach in 14 minutes."
-        else:
-            reasoning = "Take the local link service to your closest coastal point to minimize transit transitions."
-        return {"recommended_option_index": 0, "ai_transit_reasoning": reasoning}
+    hf_token = getattr(settings, "HUGGINGFACE_API_KEY", None)
+    if not hf_token:
+        return "AI synthesis unavailable — HUGGINGFACE_API_KEY not set in .env"
 
-    # Standard default response
-    reasoning = "The OuterLink bus is highly effective for your location, keeping travel costs down to $3.00."
-    return {"recommended_option_index": 0, "ai_transit_reasoning": reasoning}
+    client = OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=hf_token
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b:fireworks-ai",
+            messages=[
+                {
+                    "role": "user",
+                    "content": full_prompt
+                }
+            ],
+            temperature=0.3,
+            max_tokens=400
+        )
+        return (response.choices[0].message.content or "").strip()
+    except Exception as e:
+        print(f"AI synthesis error: {e}")
+        return f"AI synthesis unavailable: {str(e)}"
