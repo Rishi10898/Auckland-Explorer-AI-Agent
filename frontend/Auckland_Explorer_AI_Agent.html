@@ -124,11 +124,14 @@ let selectedMode = 'bus';
 // ── REVERSE GEOCODING ENGINE ──
 async function fetchPlaceName(lat, lon) {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`);
+    // Increased zoom to 18 for high precision (building/street/neighborhood level)
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`);
     if (res.ok) {
       const data = await res.json();
       const addr = data.address || {};
-      const placeName = addr.suburb || addr.neighbourhood || addr.village || addr.town || addr.city || "Auckland";
+      
+      // Prioritize local neighborhood/suburb definitions before falling back
+      const placeName = addr.neighbourhood || addr.suburb || addr.residential || addr.quarter || addr.village || addr.town || addr.city || "Auckland";
       return placeName;
     }
   } catch (e) {
@@ -136,7 +139,6 @@ async function fetchPlaceName(lat, lon) {
   }
   return "Auckland Central";
 }
-
 // ── GEO SETUP ──
 async function setGeo(state, lat, lon) {
   const dot = document.getElementById('geoDot');
