@@ -125,7 +125,7 @@ let selectedMode = 'bus';
 async function fetchPlaceName(lat, lon) {
   try {
     // Increased zoom to 18 for high precision (building/street/neighborhood level)
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=22`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`);
     if (res.ok) {
       const data = await res.json();
       const addr = data.address || {};
