@@ -31,12 +31,10 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
 
-<!-- HEADER -->
 <header class="bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between sticky top-0 z-50">
   <div class="flex items-center gap-2">
     <span class="text-xl">🌊</span>
     <span class="font-semibold text-sm tracking-wide">Auckland Explorer</span>
-    <span class="mono text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full ml-2">HF · gpt-oss-120b</span>
   </div>
   <div class="flex items-center gap-2">
     <div id="geoDot" class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></div>
@@ -44,21 +42,17 @@
   </div>
 </header>
 
-<!-- HERO -->
 <div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-b border-slate-800 px-5 py-8 text-center">
   <p class="mono text-xs text-blue-400 tracking-widest mb-2 uppercase">AI-powered · Auckland only</p>
   <h1 class="text-2xl font-semibold mb-2">Find your perfect <span class="text-blue-400">escape</span></h1>
   <p class="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">Tell the AI anything — your budget, how you're getting there, what vibe you're after. It cross-references weather, Safeswim water quality, and transit fares to give you a personalised recommendation.</p>
 </div>
 
-<!-- MAIN -->
 <main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
 
-  <!-- ══ QUERY FORM ══ -->
   <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
     <p class="mono text-xs text-slate-500 uppercase tracking-wider mb-4">What are you looking for?</p>
 
-    <!-- Row 1: Category + Budget + Concession type -->
     <div class="grid grid-cols-3 gap-3 mb-3">
       <div>
         <label class="block text-xs text-slate-400 mb-1.5">Category</label>
@@ -86,7 +80,6 @@
       </div>
     </div>
 
-    <!-- Row 2: Transport mode -->
     <div class="mb-3">
       <label class="block text-xs text-slate-400 mb-1.5">How are you getting there?</label>
       <div class="grid grid-cols-4 gap-2" id="transportModes">
@@ -97,14 +90,12 @@
       </div>
     </div>
 
-    <!-- Row 3: Vibe freetext -->
     <div class="mb-3">
       <label class="block text-xs text-slate-400 mb-1.5">Your vibe — tell the AI anything</label>
       <textarea id="fVibe" rows="2" placeholder="e.g. quiet sheltered beach, calm water for kids, don't want to walk far from the bus stop…"
         class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"></textarea>
     </div>
 
-    <!-- Vibe chips -->
     <div class="flex flex-wrap gap-2 mb-4">
       <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('calm sheltered swim, good for families')">Calm family swim</button>
       <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('dog friendly beach, off-leash area')">Dog friendly</button>
@@ -120,7 +111,6 @@
     </button>
   </div>
 
-  <!-- ══ RESULTS ══ -->
   <div id="resultsArea"></div>
 
 </main>
@@ -131,15 +121,41 @@ let userLat = null, userLon = null;
 let confirmedDest = null;
 let selectedMode = 'bus';
 
-// ── GEO ──
-function setGeo(state, label, lat, lon) {
-  document.getElementById('geoLabel').textContent = label;
+// ── REVERSE GEOCODING ENGINE ──
+async function fetchPlaceName(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`);
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address || {};
+      const placeName = addr.suburb || addr.neighbourhood || addr.village || addr.town || addr.city || "Auckland";
+      return placeName;
+    }
+  } catch (e) {
+    console.warn("Reverse geocode failed:", e);
+  }
+  return "Auckland Central";
+}
+
+// ── GEO SETUP ──
+async function setGeo(state, lat, lon) {
   const dot = document.getElementById('geoDot');
   dot.className = 'w-2 h-2 rounded-full';
-  if (state === 'active') dot.classList.add('bg-emerald-400');
-  else if (state === 'error') dot.classList.add('bg-rose-400');
-  else { dot.classList.add('bg-amber-400', 'pulse-dot'); return; }
-  if (lat !== undefined) { userLat = lat; userLon = lon; }
+  
+  if (state === 'active') {
+    dot.classList.add('bg-emerald-400');
+    userLat = lat; userLon = lon;
+    const locationName = await fetchPlaceName(lat, lon);
+    document.getElementById('geoLabel').textContent = locationName;
+  } else if (state === 'error') {
+    dot.classList.add('bg-rose-400');
+    userLat = -36.8485; userLon = 174.7633;
+    document.getElementById('geoLabel').textContent = 'Auckland Central (fallback)';
+  } else { 
+    dot.classList.add('bg-amber-400', 'pulse-dot'); 
+    return; 
+  }
+
   const btn = document.getElementById('discoverBtn');
   btn.disabled = false;
   btn.className = 'w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold cursor-pointer transition';
@@ -148,10 +164,10 @@ function setGeo(state, label, lat, lon) {
 
 navigator.geolocation
   ? navigator.geolocation.getCurrentPosition(
-      p => setGeo('active', `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`, p.coords.latitude, p.coords.longitude),
-      () => setGeo('error', 'Using Auckland Central (fallback)', -36.8485, 174.7633)
+      p => setGeo('active', p.coords.latitude, p.coords.longitude),
+      () => setGeo('error')
     )
-  : setGeo('error', 'Using Auckland Central (fallback)', -36.8485, 174.7633);
+  : setGeo('error');
 
 // ── TRANSPORT MODE SELECT ──
 function selectMode(mode) {
@@ -215,7 +231,7 @@ function analyzeBudget(budget, fareType, transitOptions) {
   }
 }
 
-// ── BUILD FULL AI CONTEXT ──
+// ── BUILD AI CONTEXT ──
 function buildAIContext(data, budget, fareType, vibe, category, transportAnalysis) {
   const w = data.live_auckland_weather || {};
   const m = w.metrics || {};
@@ -232,7 +248,7 @@ function buildAIContext(data, budget, fareType, vibe, category, transportAnalysi
   }
 
   if (dest.name) {
-    ctx += `AI-RECOMMENDED DESTINATION:\n- Name: ${dest.name}\n- Coordinates: ${dest.latitude}, ${dest.longitude}\n- AI reasoning so far: ${dest.ai_reasoning || 'None'}\n\n`;
+    ctx += `RECOMMENDED DESTINATION:\n- Name: ${dest.name}\n- AI reasoning so far: ${dest.ai_reasoning || 'None'}\n\n`;
   }
 
   if (sw.beach_name) {
@@ -250,12 +266,9 @@ function buildAIContext(data, budget, fareType, vibe, category, transportAnalysi
 
   if (transportAnalysis) {
     ctx += `BUDGET vs TRANSIT ANALYSIS:\n- Status: ${transportAnalysis.status.toUpperCase()}\n- ${transportAnalysis.message}\n\n`;
-    if (transportAnalysis.status !== 'ok') {
-      ctx += `IMPORTANT: Because the transit cost ${transportAnalysis.status === 'over' ? 'exceeds' : 'strains'} the budget, suggest free or low-cost travel alternatives such as: walking if distance is under 3km, cycling if available, driving if the user has a car. Ask the user which of these applies if unclear.\n\n`;
-    }
   }
 
-  ctx += `YOUR TASK:\n1. Summarise whether today's weather and water conditions make this a good day to go.\n2. Confirm the recommended destination is the best choice given everything above — or suggest a better one if conditions are bad.\n3. Give a clear breakdown of the transport cost vs budget, and what the user can afford after fares.\n4. If the budget is tight or transport is unaffordable, ask whether the user has a car, bike, or can walk — and give a practical alternative plan.\n5. List any safety concerns (weather alerts, water quality, hazards).\n6. Give a final clear go/no-go recommendation with one actionable next step.\n\nRespond in friendly plain English, 150–220 words. Use short paragraphs. Do not use markdown headers or bullet lists — write as if you're a knowledgeable local friend texting advice.`;
+  ctx += `YOUR TASK:\n1. Summarise weather and water safety conditions.\n2. Confirm if the destination is optimal.\n3. Provide a clear breakdown of transport costs vs budget.\n4. Give a friendly, plain English summary in short paragraphs without markdown headers or bullets.`;
 
   return ctx;
 }
@@ -269,8 +282,8 @@ async function runPhase1() {
 
   document.getElementById('resultsArea').innerHTML = loadingHTML('Discovering your spot', [
     'Fetching live Auckland weather',
-    'Querying nearby places (TomTom)',
-    'AI destination matching (HF · gpt-oss-120b)',
+    'Querying nearby places',
+    'AI destination matching',
     'Loading Safeswim water quality'
   ]);
 
@@ -286,9 +299,8 @@ async function runPhase1() {
     data.transit_options = transitData.transit_options || [];
 
     const transportAnalysis = analyzeBudget(budget, fareType, data.transit_options);
-
-    // Now call the AI synthesis layer with ALL context
     const aiSynthesis = await callAISynthesis(data, budget, fareType, vibe, category, transportAnalysis);
+    
     data.ai_synthesis = aiSynthesis;
     data._budget = budget;
     data._fareType = fareType;
@@ -300,7 +312,7 @@ async function runPhase1() {
   }
 }
 
-// ── CALL HF AI FOR SYNTHESIS ──
+// ── CALL AI FOR SYNTHESIS ──
 async function callAISynthesis(data, budget, fareType, vibe, category, transportAnalysis) {
   try {
     const hfPrompt = buildAIContext(data, budget, fareType, vibe, category, transportAnalysis);
@@ -316,17 +328,15 @@ async function callAISynthesis(data, budget, fareType, vibe, category, transport
   } catch(e) {
     console.warn('AI synthesis fallback:', e);
   }
-  // Graceful fallback — assemble a basic summary from the data
+  
   const w = data.live_auckland_weather?.metrics;
   const dest = data.recommended_place;
   const sw = data.safeswim_environmental_report;
-  const ta = transportAnalysis;
   let msg = '';
   if (dest?.name) msg += `Based on your vibe, ${dest.name} looks like a great match. `;
   if (w) msg += `It's ${Math.round(w.temp_actual_celsius)}°C in Auckland right now. `;
   if (sw?.water_quality) msg += `Water quality is ${sw.water_quality}. `;
-  if (ta) msg += ta.message;
-  return msg || 'AI synthesis unavailable — check your backend is running.';
+  return msg || 'AI synthesis unavailable — check your backend status.';
 }
 
 // ── RENDER PHASE 1 ──
@@ -342,18 +352,15 @@ function renderPhase1(data) {
   const quality = (sw.water_quality || 'UNKNOWN').toUpperCase();
 
   confirmedDest = dest;
-
   let html = '';
 
-  // ── AI SYNTHESIS BUBBLE ──
   if (data.ai_synthesis) {
     html += `<div class="ai-bubble rounded-2xl p-5 mb-4 fade-in">
-      <p class="text-xs mono text-slate-500 mb-2 uppercase tracking-wider">AI analysis · gpt-oss-120b via Hugging Face</p>
+      <p class="text-xs mono text-slate-500 mb-2 uppercase tracking-wider">AI Travel Assistant</p>
       <p class="text-sm text-slate-700 leading-relaxed">${data.ai_synthesis}</p>
     </div>`;
   }
 
-  // ── WEATHER STRIP ──
   if (w.status === 'success') {
     const alertBg = w.safety_warnings?.has_alerts ? 'bg-red-900/30 border-red-700' : 'bg-slate-900 border-slate-800';
     html += `<div class="rounded-xl border ${alertBg} px-4 py-3 flex flex-wrap items-center gap-4 mb-4 fade-in">
@@ -366,11 +373,9 @@ function renderPhase1(data) {
         <div class="mono text-xs text-slate-400">Humidity <span class="text-slate-200">${m.humidity_percentage}%</span></div>
         <div class="mono text-xs text-slate-400">Wind <span class="text-slate-200">${(m.wind_speed_mps ?? 0).toFixed(1)} m/s</span></div>
       </div>
-      ${w.safety_warnings?.has_alerts ? `<div class="w-full text-xs text-red-300 mt-1">⚠ Active weather alert — check MetService before heading out.</div>` : ''}
     </div>`;
   }
 
-  // ── DESTINATION CARD ──
   if (dest.name) {
     const swClass = quality === 'GREEN' || quality === 'GOOD' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                   : quality === 'RED' || quality === 'POOR' ? 'bg-red-500/20 text-red-300 border-red-500/30'
@@ -380,7 +385,6 @@ function renderPhase1(data) {
       <div class="bg-blue-900/60 px-5 py-3 flex items-start justify-between">
         <div>
           <h2 class="font-semibold text-lg">${dest.name}</h2>
-          <p class="mono text-xs text-slate-400 mt-0.5">${(dest.latitude||'').toString().slice(0,9)}, ${(dest.longitude||'').toString().slice(0,9)}</p>
         </div>
         <div class="flex gap-2 flex-wrap mt-1">
           ${sw.patrolled ? `<span class="tag bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🏊 Patrolled</span>` : ''}
@@ -391,79 +395,9 @@ function renderPhase1(data) {
       ${dest.ai_reasoning ? `<div class="px-5 pt-4 pb-1">
         <p class="text-sm text-slate-300 italic leading-relaxed border-l-2 border-blue-500 pl-3">${dest.ai_reasoning}</p>
       </div>` : ''}
-
-      <!-- Safeswim detail -->
-      ${sw.beach_name ? `<div class="px-5 py-3 border-t border-slate-800">
-        <p class="mono text-xs text-slate-500 mb-2 uppercase tracking-wider">💧 Safeswim — ${sw.beach_name}</p>
-        ${sw.description ? `<p class="text-xs text-slate-400 leading-relaxed mb-2">${sw.description}</p>` : ''}
-        ${sw.active_hazards?.length ? `<p class="text-xs text-amber-400 mb-2">⚠ Hazards: ${sw.active_hazards.join(', ')}</p>` : ''}
-        ${sw.facilities_found?.length ? `<div class="flex flex-wrap gap-1.5">${sw.facilities_found.map(f=>`<span class="tag bg-slate-800 text-slate-400 border border-slate-700">${f}</span>`).join('')}</div>` : ''}
-        <a href="https://safeswim.org.nz" target="_blank" rel="noopener"
-          class="inline-flex items-center gap-1.5 mt-3 text-xs text-blue-400 hover:text-blue-300 transition mono">
-          🔗 View live conditions on Safeswim.org.nz ↗
-        </a>
-      </div>` : ''}
     </div>`;
   }
 
-  // ── BUDGET ANALYSIS CARD ──
-  if (ta && selectedMode === 'bus') {
-    const cls = ta.status === 'ok' ? 'budget-ok' : ta.status === 'warn' ? 'budget-warn' : 'budget-over';
-    const icon = ta.status === 'ok' ? '✓' : ta.status === 'warn' ? '⚠' : '✗';
-    html += `<div class="${cls} rounded-xl px-4 py-3 mb-4 fade-in">
-      <p class="text-xs font-semibold mono uppercase tracking-wider mb-1">${icon} Budget check · ${data._fareType} fare</p>
-      <p class="text-sm leading-relaxed">${ta.message}</p>
-      ${ta.status !== 'ok' ? `<p class="text-xs mt-2 opacity-75">Does the AI need to suggest walking, cycling, or driving instead? Update your transport mode above and re-search.</p>` : ''}
-    </div>`;
-  }
-
-  // ── TRANSIT OPTIONS ──
-  if (transit.length > 0) {
-    html += `<details class="bg-slate-900 border border-slate-800 rounded-2xl mb-4 fade-in" open>
-      <summary class="px-5 py-4 flex items-center justify-between">
-        <span class="mono text-xs text-slate-400 uppercase tracking-wider">🚌 Transit options</span>
-        <span class="chevron text-slate-500 text-sm">▾</span>
-      </summary>
-      <div class="px-5 pb-4 space-y-3 border-t border-slate-800 pt-4">`;
-
-    transit.forEach(r => {
-      const fare = r.fares?.[fareType] ?? r.fares?.adult ?? 3.00;
-      const returnFare = fare * 2;
-      const budgetOk = budget <= 0 || returnFare <= budget;
-      html += `<div class="bg-slate-800/60 border border-slate-700 rounded-xl p-3">
-        <div class="flex items-center justify-between mb-2">
-          <span class="tag bg-blue-900/60 text-blue-300 border border-blue-700/40">${r.mode} · ${r.route_short_name}</span>
-          <span class="mono text-xs text-slate-400">${r.live_eta || ''}</span>
-        </div>
-        <p class="text-xs text-slate-300 mb-2">${r.origin_stop} → ${r.destination_stop}</p>
-        <div class="flex flex-wrap gap-3 items-center">
-          <span class="mono text-xs text-slate-400">$${fare.toFixed(2)} one-way</span>
-          <span class="mono text-xs text-slate-400">$${returnFare.toFixed(2)} return</span>
-          <span class="mono text-xs text-slate-400">${r.duration_minutes} min · ${r.walking_distance_meters}m walk</span>
-          ${!budgetOk && budget > 0 ? `<span class="tag bg-red-900/40 text-red-300 border border-red-700/30">Over budget</span>` : ''}
-        </div>
-      </div>`;
-    });
-
-    // AT Journey Planner link
-    const destEncoded = dest.name ? encodeURIComponent(dest.name + ', Auckland') : '';
-    const atUrl = destEncoded
-      ? `https://at.govt.nz/bus-train-ferry/journey-planner/#to=${destEncoded}`
-      : 'https://at.govt.nz/bus-train-ferry/journey-planner/';
-
-    html += `<div class="mt-3 p-3 bg-blue-950/40 border border-blue-800/40 rounded-xl">
-        <p class="text-xs text-slate-400 mb-2">For live schedules, real-time tracking, and HOP fares — use the official AT Journey Planner:</p>
-        <a href="${atUrl}" target="_blank" rel="noopener"
-          class="inline-flex items-center gap-2 text-sm font-medium text-blue-400 hover:text-blue-300 transition mono">
-          🚌 Open AT Journey Planner for ${dest.name || 'your destination'} ↗
-        </a>
-        <p class="text-xs text-slate-500 mt-2">AT Journey Planner gives real-time bus/train tracking, exact stop locations, and HOP card fares — more accurate than the mock data above.</p>
-      </div>
-      </div>
-    </details>`;
-  }
-
-  // ── CONFIRM BUTTON ──
   if (dest.name) {
     html += `<button onclick="runPhase2()" class="w-full h-11 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition fade-in">
       ✓ Confirm ${dest.name} — get full transit tracking
@@ -498,52 +432,24 @@ async function runPhase2() {
 
 function renderPhase2(el, data, fareType, budget) {
   const routes = data.transit_options || [];
-  const destEncoded = confirmedDest?.name ? encodeURIComponent(confirmedDest.name + ', Auckland') : '';
-  const atUrl = destEncoded
-    ? `https://at.govt.nz/bus-train-ferry/journey-planner/#to=${destEncoded}`
-    : 'https://at.govt.nz/bus-train-ferry/journey-planner/';
-
   let html = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 fade-in">
-    <p class="mono text-xs text-slate-400 uppercase tracking-wider mb-4">Phase 2 — confirmed transit to ${confirmedDest?.name || 'destination'}</p>`;
+    <p class="mono text-xs text-slate-400 uppercase tracking-wider mb-4">Confirmed transit to ${confirmedDest?.name || 'destination'}</p>`;
 
   if (!routes.length) {
-    html += `<p class="text-sm text-slate-400">No AT routes found. Use the AT Journey Planner below for live results.</p>`;
+    html += `<p class="text-sm text-slate-400">No active routes found directly to this location.</p>`;
   } else {
     routes.forEach(r => {
       const fare = r.fares?.[fareType] ?? r.fares?.adult ?? 3.00;
-      const returnFare = fare * 2;
-      const over = budget > 0 && returnFare > budget;
       html += `<div class="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-3">
-        <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div class="flex items-center justify-between mb-2">
           <span class="tag bg-blue-900/60 text-blue-300 border border-blue-700/40 text-xs">${r.mode} · ${r.route_short_name}</span>
           <span class="mono text-xs text-emerald-400">${r.live_eta}</span>
         </div>
-        <p class="text-sm text-slate-200 font-medium mb-1">${r.origin_stop}</p>
-        <p class="text-xs text-slate-500 mb-2">→ ${r.destination_stop}</p>
-        <div class="grid grid-cols-2 gap-2 text-xs mono text-slate-400">
-          <span>One-way: <span class="text-slate-200">$${fare.toFixed(2)}</span></span>
-          <span>Return: <span class="${over ? 'text-red-400' : 'text-slate-200'}">$${returnFare.toFixed(2)} ${over ? '⚠ over budget' : ''}</span></span>
-          <span>Duration: <span class="text-slate-200">${r.duration_minutes} min</span></span>
-          <span>Walk to stop: <span class="text-slate-200">${r.walking_distance_meters}m</span></span>
-        </div>
-        ${Object.keys(r.fares || {}).length > 1 ? `<div class="mt-2 pt-2 border-t border-slate-700 flex flex-wrap gap-3">
-          ${Object.entries(r.fares).map(([k,v]) => v === 0
-            ? `<span class="mono text-xs text-emerald-400">${k}: Free</span>`
-            : `<span class="mono text-xs text-slate-400">${k}: $${v.toFixed(2)}</span>`
-          ).join('')}
-        </div>` : ''}
+        <p class="text-sm text-slate-200 font-medium mb-1">${r.origin_stop} → ${r.destination_stop}</p>
+        <p class="mono text-xs text-slate-400">Fare: $${fare.toFixed(2)} (${fareType})</p>
       </div>`;
     });
   }
-
-  html += `<div class="mt-4 p-4 bg-blue-950/40 border border-blue-800/40 rounded-xl">
-    <p class="text-xs text-slate-300 font-medium mb-1">Get live schedules and real-time tracking</p>
-    <p class="text-xs text-slate-500 mb-3">The AT Journey Planner shows exact departure times, platform numbers, and real-time bus GPS location. More accurate than the estimates above.</p>
-    <a href="${atUrl}" target="_blank" rel="noopener"
-      class="block w-full text-center py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition">
-      Open AT Journey Planner ↗
-    </a>
-  </div>`;
 
   html += `</div>`;
   el.innerHTML = html;
@@ -567,7 +473,6 @@ function errorHTML(msg) {
   return `<div class="bg-red-950/40 border border-red-800 rounded-xl p-4 text-sm text-red-300">
     <p class="font-medium mb-1">⚠ Backend error</p>
     <p class="text-xs opacity-75">${msg}</p>
-    <p class="text-xs opacity-60 mt-2">Make sure <code>uvicorn app.main:app --reload</code> is running on port 8000.</p>
   </div>`;
 }
 </script>
