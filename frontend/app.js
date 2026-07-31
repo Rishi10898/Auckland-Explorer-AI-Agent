@@ -160,3 +160,25 @@ function resetUserLocation() {
         window.location.reload();
     });
 }
+async function sendChatMessage(userMessage) {
+    // Retrieve coordinates (will instantly grab from localStorage if reloaded)
+    getUserLocation(async (coords) => {
+        const payload = {
+            message: userMessage,
+            user_lat: coords.lat,
+            user_lon: coords.lon,
+            mode: "bus", // or grab from your UI dropdown
+            radius_meters: 10000,
+            stage: "recommend"
+        };
+
+        const response = await fetch("http://localhost:8000/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        console.log("Backend response:", data);
+    });
+}
