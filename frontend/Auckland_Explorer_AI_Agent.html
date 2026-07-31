@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auckland Explorer</title>
+<title>Auckland Explorer · Tāmaki Makaurau</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
@@ -14,298 +14,349 @@
   .spinner { animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   select option { background: #1e293b; color: #e2e8f0; }
-  .chip-btn:hover { background: #0e4f6b22; border-color: #0e4f6b; color: #0e4f6b; }
-  .fade-in { animation: fadeIn .4s ease; }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-  .ai-bubble { background: linear-gradient(135deg, #f0f9fc 0%, #e8f5ec 100%); border-left: 3px solid #1a7da0; }
-  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; font-family: 'DM Mono', monospace; font-weight: 500; }
+  .fade-in { animation: fadeIn .3s ease-out; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  /* Custom scrollbar for horizontal place cards */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden">
 
-<header class="bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between sticky top-0 z-50">
+<header class="bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between shrink-0">
   <div class="flex items-center gap-2">
     <span class="text-xl">🌊</span>
-    <span class="font-semibold text-sm tracking-wide">Auckland Explorer</span>
+    <span class="font-semibold text-sm tracking-wide">Tāmaki Makaurau Explorer</span>
   </div>
-  <div class="flex items-center gap-2">
-    <div id="geoDot" class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></div>
-    <span id="geoLabel" class="mono text-xs text-slate-400">Locating…</span>
+  <div class="flex items-center gap-3">
+    <div class="flex items-center gap-1.5">
+      <div id="geoDot" class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></div>
+      <span id="geoLabel" class="mono text-xs text-slate-400">Locating…</span>
+    </div>
+    <button onclick="resetUserLocation()" class="text-[11px] mono text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 transition">
+      📍 Reset GPS
+    </button>
   </div>
 </header>
 
-<div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-b border-slate-800 px-5 py-8 text-center">
-  <p class="mono text-xs text-blue-400 tracking-widest mb-2 uppercase">AI-powered · Auckland only</p>
-  <h1 class="text-2xl font-semibold mb-2">Find your perfect <span class="text-blue-400">escape</span></h1>
-  <p class="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">Ask for a specific spot or describe a vibe. The AI evaluates live weather, water quality, and transit accessibility.</p>
-</div>
-
-<main class="max-w-2xl mx-auto px-4 py-6 space-y-4">
-
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-    <p class="mono text-xs text-slate-500 uppercase tracking-wider mb-4">What are you looking for?</p>
-
-    <div class="mb-4">
-      <label class="block text-xs text-slate-400 mb-1.5">How are you getting there?</label>
-      <div class="grid grid-cols-4 gap-2" id="transportModes">
-        <button onclick="selectMode('bus')" data-mode="bus" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚌 Bus / Train</button>
-        <button onclick="selectMode('drive')" data-mode="drive" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚗 Drive</button>
-        <button onclick="selectMode('cycle')" data-mode="cycle" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚴 Cycle</button>
-        <button onclick="selectMode('walk')" data-mode="walk" class="mode-btn bg-slate-800 border border-slate-700 rounded-lg py-2 text-xs text-slate-300 hover:border-blue-500 transition">🚶 Walk</button>
+<main class="flex-1 overflow-hidden max-w-3xl w-full mx-auto p-4 flex flex-col">
+  
+  <div id="chatThread" class="flex-1 overflow-y-auto space-y-4 pr-1 pb-4">
+    
+    <div class="flex items-start gap-3 fade-in">
+      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-sm leading-relaxed text-slate-200">
+        Kia ora! I am your interactive AI guide for Tāmaki Makaurau (Auckland). Tell me what kind of vibe, coastal walk, or swim spot you're looking for!
       </div>
     </div>
 
-    <div class="mb-3">
-      <label class="block text-xs text-slate-400 mb-1.5">Category</label>
-      <select id="fCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 h-10 text-sm text-slate-100 focus:outline-none focus:border-blue-500">
-        <option value="beach">🏖 Beach / swim</option>
-        <option value="park">🌿 National park / Reserve</option>
-        <option value="coastal_walk">🚶 Coastal walk</option>
-        <option value="restaurant">🍽 Restaurant / Cafe</option>
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label class="block text-xs text-slate-400 mb-1.5">Destination or Vibe — tell the AI anything</label>
-      <textarea id="fVibe" rows="2" placeholder="e.g., 'I want to go to Piha Beach' or 'quiet sheltered beach for swimming'..."
-        class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"></textarea>
-    </div>
-
-    <div class="flex flex-wrap gap-2 mb-4">
-      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('Piha Beach')">Piha Beach</button>
-      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('Mission Bay')">Mission Bay</button>
-      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('Western Springs Park')">Western Springs</button>
-      <button class="chip-btn text-xs border border-slate-700 bg-slate-800/50 text-slate-400 px-3 py-1.5 rounded-full transition" onclick="addVibe('calm family swim beach')">Calm family swim</button>
-    </div>
-
-    <button id="discoverBtn" onclick="runDiscovery()" disabled
-      class="w-full h-11 rounded-xl bg-slate-700 text-slate-400 text-sm font-medium cursor-not-allowed transition">
-      Awaiting GPS fix…
-    </button>
   </div>
 
-  <div id="resultsArea"></div>
+  <div class="shrink-0 mt-2 bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-xl">
+    
+    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mb-2 pb-1 text-xs">
+      <button onclick="quickSend('Piha Beach swim & surf')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🏖 Piha Beach</button>
+      <button onclick="quickSend('Mission Bay family swim')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🌴 Mission Bay</button>
+      <button onclick="quickSend('Western Springs peaceful park walk')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🌿 Western Springs</button>
+      <button onclick="quickSend('Quiet coastal walk with sea views')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🚶 Coastal Walk</button>
+    </div>
+
+    <form id="chatForm" onsubmit="handleFormSubmit(event)" class="flex gap-2 items-center">
+      
+      <select id="fMode" class="bg-slate-800 text-xs border border-slate-700 text-slate-200 rounded-xl px-2 h-10 focus:outline-none focus:border-blue-500">
+        <option value="bus">🚌 Bus/Train</option>
+        <option value="drive">🚗 Drive</option>
+        <option value="cycle">🚴 Cycle</option>
+        <option value="walk">🚶 Walk</option>
+      </select>
+
+      <select id="fRadius" class="bg-slate-800 text-xs border border-slate-700 text-slate-200 rounded-xl px-2 h-10 focus:outline-none focus:border-blue-500">
+        <option value="5000">5 km</option>
+        <option value="10000" selected>10 km</option>
+        <option value="25000">25 km</option>
+      </select>
+
+      <input 
+        type="text" 
+        id="fInput" 
+        placeholder="Describe a vibe or destination in Auckland..." 
+        class="flex-1 bg-slate-800 text-sm border border-slate-700 rounded-xl px-3.5 h-10 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+        required
+      />
+
+      <button type="submit" id="sendBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm px-4 h-10 rounded-xl transition flex items-center justify-center shrink-0">
+        Send →
+      </button>
+    </form>
+  </div>
 
 </main>
 
 <script>
-const API = 'http://127.0.0.1:8000';
-let userLat = null, userLon = null;
-let currentPlaceName = "Western Springs";
-let selectedMode = 'bus';
-let currentSearchData = null;
+const API_URL = 'http://127.0.0.1:8000/api/chat';
+let cachedUserLat = null, cachedUserLon = null;
 
-// ── REVERSE GEOCODING ENGINE ──
-async function fetchPlaceName(lat, lon) {
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`);
-    if (res.ok) {
-      const data = await res.json();
-      const addr = data.address || {};
-      return addr.neighbourhood || addr.suburb || addr.residential || addr.village || addr.town || addr.city || "Auckland";
-    }
-  } catch (e) {
-    console.warn("Reverse geocode failed:", e);
+// ── 1. GEOLOCATION WITH LOCALSTORAGE PERSISTENCE ──
+function initUserLocation() {
+  const savedLat = localStorage.getItem('tm_user_lat');
+  const savedLon = localStorage.getItem('tm_user_lon');
+
+  if (savedLat && savedLon) {
+    cachedUserLat = parseFloat(savedLat);
+    cachedUserLon = parseFloat(savedLon);
+    setGeoStatus('active', 'Location Cached');
+    return;
   }
-  return "Western Springs";
+
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        cachedUserLat = pos.coords.latitude;
+        cachedUserLon = pos.coords.longitude;
+        localStorage.setItem('tm_user_lat', cachedUserLat);
+        localStorage.setItem('tm_user_lon', cachedUserLon);
+        setGeoStatus('active', 'Auckland GPS Fixed');
+      },
+      err => {
+        console.warn("Geolocation permission denied or failed. Using Auckland Central fallback.", err);
+        cachedUserLat = -36.8485;
+        cachedUserLon = 174.7633;
+        setGeoStatus('error', 'Auckland Central (Fallback)');
+      },
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  } else {
+    cachedUserLat = -36.8485;
+    cachedUserLon = 174.7633;
+    setGeoStatus('error', 'Auckland Central (Fallback)');
+  }
 }
 
-// ── GEO SETUP ──
-async function setGeo(state, lat, lon) {
+function setGeoStatus(type, label) {
   const dot = document.getElementById('geoDot');
+  const txt = document.getElementById('geoLabel');
   dot.className = 'w-2 h-2 rounded-full';
   
-  if (state === 'active') {
+  if (type === 'active') {
     dot.classList.add('bg-emerald-400');
-    userLat = lat; userLon = lon;
-    currentPlaceName = await fetchPlaceName(lat, lon);
-    document.getElementById('geoLabel').textContent = currentPlaceName;
-  } else if (state === 'error') {
+  } else {
     dot.classList.add('bg-rose-400');
-    userLat = -36.8485; userLon = 174.7633;
-    currentPlaceName = 'Auckland Central';
-    document.getElementById('geoLabel').textContent = 'Auckland Central (fallback)';
-  } else { 
-    dot.classList.add('bg-amber-400', 'pulse-dot'); 
-    return; 
   }
-
-  const btn = document.getElementById('discoverBtn');
-  btn.disabled = false;
-  btn.className = 'w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold cursor-pointer transition';
-  btn.textContent = 'Explore Spot →';
+  txt.textContent = label;
 }
 
-navigator.geolocation
-  ? navigator.geolocation.getCurrentPosition(
-      p => setGeo('active', p.coords.latitude, p.coords.longitude),
-      () => setGeo('error')
-    )
-  : setGeo('error');
-
-// ── TRANSPORT MODE SELECT ──
-function selectMode(mode) {
-  selectedMode = mode;
-  document.querySelectorAll('.mode-btn').forEach(b => {
-    b.classList.remove('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
-    b.classList.add('border-slate-700', 'text-slate-300');
-  });
-  
-  const active = document.querySelector(`[data-mode="${mode}"]`);
-  if (active) {
-    active.classList.add('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
-    active.classList.remove('border-slate-700', 'text-slate-300');
-  }
-}
-selectMode('bus');
-
-function addVibe(text) {
-  const v = document.getElementById('fVibe');
-  v.value = text;
-  v.focus();
+function resetUserLocation() {
+  localStorage.removeItem('tm_user_lat');
+  localStorage.removeItem('tm_user_lon');
+  alert("Cleared cached coordinates. Refreshing position...");
+  window.location.reload();
 }
 
-// ── DISCOVERY ENGINE ──
-async function runDiscovery(overrideMode = null, forceAlternative = false) {
-  if (overrideMode) selectMode(overrideMode);
+initUserLocation();
 
-  const category = document.getElementById('fCategory').value;
-  const vibe = document.getElementById('fVibe').value || category;
-
-  document.getElementById('resultsArea').innerHTML = loadingHTML('Evaluating destination', [
-    'Analyzing prompt & checking transit accessibility',
-    'Checking Auckland weather & water safety',
-    'Preparing recommendation'
-  ]);
-
-  try {
-    const res = await fetch(`${API}/api/recommend?vibe=${encodeURIComponent(vibe)}&lat=${userLat}&lon=${userLon}&mode=${selectedMode}&force_alt=${forceAlternative}`);
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    const data = await res.json();
-    currentSearchData = data;
-
-    renderEvaluation(data, vibe);
-  } catch(e) {
-    document.getElementById('resultsArea').innerHTML = errorHTML(e.message);
-  }
-}
-
-// ── RENDER EVALUATION & PROMPT CONFIRMATION ──
-function renderEvaluation(data, userQuery) {
-  const dest = data.recommended_place || {};
-  const sw = data.safeswim_environmental_report || {};
-  const w = data.live_auckland_weather || {};
-  const m = w.metrics || {};
-  const quality = (sw.water_quality || 'UNKNOWN').toUpperCase();
-
-  // Known spots without bus service (e.g., Piha, Karekare, Bethells)
-  const isBusInaccessible = dest.bus_accessible === false || 
-    (dest.name && dest.name.toLowerCase().includes('piha') && selectedMode === 'bus');
-
-  let html = '';
-
-  // Weather Banner
-  if (w.status === 'success') {
-    html += `<div class="rounded-xl border bg-slate-900 border-slate-800 px-4 py-3 flex items-center justify-between mb-4 fade-in">
-      <div>
-        <div class="text-xl font-semibold">${Math.round(m.temp_actual_celsius ?? 0)}°C</div>
-        <div class="text-xs text-slate-400">${w.description || w.condition}</div>
+// ── 2. CHAT RENDERING ENGINE ──
+function appendUserMessage(text) {
+  const thread = document.getElementById('chatThread');
+  const html = `
+    <div class="flex items-start gap-3 justify-end fade-in">
+      <div class="bg-blue-600 rounded-2xl rounded-tr-none p-3.5 max-w-[85%] text-sm text-slate-100 shadow-md">
+        ${escapeHtml(text)}
       </div>
-      <div class="mono text-xs text-slate-400">Feels like <span class="text-slate-200">${Math.round(m.temp_feels_like_celsius ?? 0)}°C</span></div>
-    </div>`;
+      <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold shrink-0">You</div>
+    </div>
+  `;
+  thread.insertAdjacentHTML('beforeend', html);
+  scrollToBottom();
+}
+
+function appendAIMessage(data, isConfirmationStage = false) {
+  const thread = document.getElementById('chatThread');
+  const places = data.recommended_places || [];
+  const transit = data.transit_options || [];
+  const safeswim = data.safeswim_report || {};
+
+  // Build Carousel Cards
+  let cardsHtml = '';
+  if (places.length > 0) {
+    cardsHtml = `
+      <div class="flex overflow-x-auto gap-3 py-2 my-2 no-scrollbar">
+        ${places.map(p => `
+          <div class="min-w-[260px] max-w-[280px] bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between shrink-0 shadow-lg">
+            <div>
+              <div class="flex justify-between items-start mb-1">
+                <h3 class="font-bold text-blue-400 text-sm">${escapeHtml(p.name)}</h3>
+                <span class="text-[10px] mono bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">${escapeHtml(p.suburb || 'Auckland')}</span>
+              </div>
+              
+              <p class="text-xs text-slate-300 mt-2 leading-relaxed line-clamp-2">
+                <strong class="text-blue-300">History:</strong> ${escapeHtml(p.cultural_significance || 'Historical landmark in Tāmaki Makaurau.')}
+              </p>
+              
+              <div class="flex flex-wrap gap-1 mt-2.5">
+                ${(p.amenities || []).map(a => `<span class="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">✓ ${escapeHtml(a)}</span>`).join('')}
+              </div>
+            </div>
+
+            <div class="mt-3 pt-2 border-t border-slate-900 flex flex-col gap-2">
+              ${p.auckland_council_url ? `
+                <a href="${p.auckland_council_url}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-center text-blue-400 hover:underline">
+                  🌐 Auckland Council Info
+                </a>
+              ` : ''}
+
+              ${!isConfirmationStage ? `
+                <button onclick="confirmDestination('${escapeHtml(p.name)}', ${p.latitude}, ${p.longitude})" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded-lg transition">
+                  Lock in Spot & View Routes 🚌
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 
-  // Spot Card
-  html += `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-4 fade-in">
-    <div class="flex items-start justify-between mb-3">
-      <div>
-        <span class="text-xs mono text-blue-400 uppercase tracking-wider">Destination Evaluation</span>
-        <h2 class="font-semibold text-lg text-slate-100">${dest.name || 'Requested Spot'}</h2>
+  // Build Safeswim Badge
+  let safeswimHtml = '';
+  if (safeswim.water_quality && safeswim.water_quality !== 'UNKNOWN') {
+    const isSafe = safeswim.water_quality.toLowerCase().includes('green') || safeswim.water_quality.toLowerCase().includes('safe');
+    safeswimHtml = `
+      <div class="mt-2 p-2 rounded-lg text-xs flex items-center gap-2 border ${isSafe ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300' : 'bg-amber-950/40 border-amber-800/60 text-amber-300'}">
+        <span>🏊 Water Quality (Safeswim): <strong>${escapeHtml(safeswim.water_quality)}</strong></span>
+        ${safeswim.patrolled ? '<span class="ml-auto font-mono text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded">Patrolled</span>' : ''}
       </div>
-      <div class="flex gap-2">
-        ${sw.patrolled ? `<span class="tag bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🏊 Patrolled</span>` : ''}
-        ${quality !== 'UNKNOWN' ? `<span class="tag bg-slate-800 border border-slate-700 text-slate-300">Water: ${quality}</span>` : ''}
+    `;
+  }
+
+  // Build Transit Options Block
+  let transitHtml = '';
+  if (data.show_transit_links && transit.length > 0) {
+    transitHtml = `
+      <div class="mt-3 bg-slate-950 border border-blue-500/30 p-3 rounded-xl">
+        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">🚍 Available Transit Options</h4>
+        ${transit.map(t => `
+          <div class="text-xs text-slate-300 py-1 flex justify-between border-b border-slate-900 last:border-0">
+            <span>${escapeHtml(t.service_line || 'Route')} (${escapeHtml(t.estimated_travel_time || 'N/A')})</span>
+            <span class="font-mono text-blue-400">${escapeHtml(t.fare_estimate || 'Standard AT Fare')}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  const aiHtml = `
+    <div class="flex items-start gap-3 fade-in">
+      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-sm leading-relaxed text-slate-200">
+        <p>${escapeHtml(data.chat_response || 'Here are the best options found for your search.')}</p>
+        ${cardsHtml}
+        ${safeswimHtml}
+        ${transitHtml}
+        ${data.follow_up_question ? `<p class="text-xs text-blue-400 font-medium mt-2">${escapeHtml(data.follow_up_question)}</p>` : ''}
       </div>
     </div>
-    
-    <p class="text-sm text-slate-300 mb-4 leading-relaxed">${data.ai_reasoning || dest.ai_reasoning || 'Evaluating transit options from your location.'}</p>`;
+  `;
 
-  // SCENARIO 1: User chose BUS, but destination has NO bus access (e.g. Piha)
-  if (isBusInaccessible) {
-    html += `
-      <div class="bg-amber-950/40 border border-amber-800/60 rounded-xl p-4 mb-4">
-        <p class="text-xs font-semibold text-amber-300 uppercase tracking-wide mb-1">⚠️ Public Transport Notice</p>
-        <p class="text-xs text-amber-200 leading-relaxed mb-3">
-          <strong>${dest.name}</strong> is not serviced by Auckland Transport buses or trains. How would you like to proceed?
-        </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button onclick="runDiscovery('drive')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold py-2.5 px-3 rounded-lg transition text-center">
-            🚗 Switch to Driving / Rideshare
-          </button>
-          <button onclick="runDiscovery('bus', true)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2.5 px-3 rounded-lg border border-slate-700 transition text-center">
-            🚌 No, find a bus-accessible beach
-          </button>
-        </div>
-      </div>`;
-  } 
-  // SCENARIO 2: Valid route found -> Show Navigation Link at the VERY bottom
-  else {
-    const destEncoded = encodeURIComponent(`${dest.name}, Auckland`);
+  thread.insertAdjacentHTML('beforeend', aiHtml);
+  scrollToBottom();
+}
 
-    html += `<div class="border-t border-slate-800 pt-4 mt-2">
-      <p class="text-xs text-slate-400 mb-3">Transport selected: <strong class="text-slate-200 uppercase">${selectedMode}</strong></p>`;
+function appendLoadingMessage() {
+  const thread = document.getElementById('chatThread');
+  const id = 'loading-' + Date.now();
+  const html = `
+    <div id="${id}" class="flex items-start gap-3 fade-in">
+      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-2 text-xs text-slate-400">
+        <div class="spinner w-4 h-4 border-2 border-slate-700 border-t-blue-400 rounded-full"></div>
+        Evaluating options in Tāmaki Makaurau…
+      </div>
+    </div>
+  `;
+  thread.insertAdjacentHTML('beforeend', html);
+  scrollToBottom();
+  return id;
+}
 
-    if (selectedMode === 'bus') {
-      const atLink = `https://at.govt.nz/bus-train-ferry/journey-planner/`;
-      html += `
-        <a href="${atLink}" target="_blank" rel="noopener noreferrer" 
-           class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition">
-          <span>🚍 Open AT Journey Planner</span>
-          <span class="text-xs font-normal opacity-80">(External Link)</span>
-        </a>`;
-    } else {
-      let gmapMode = 'driving';
-      let modeIcon = '🚗';
-      let modeLabel = 'Driving';
+function removeLoadingMessage(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
 
-      if (selectedMode === 'cycle') { gmapMode = 'bicycling'; modeIcon = '🚴'; modeLabel = 'Cycling'; }
-      if (selectedMode === 'walk') { gmapMode = 'walking'; modeIcon = 'WALKING'; modeLabel = 'Walking'; }
+// ── 3. API COMMUNICATION HANDLERS ──
+function quickSend(promptText) {
+  document.getElementById('fInput').value = promptText;
+  handleFormSubmit(new Event('submit'));
+}
 
-      const mapsLink = `https://www.google.com/maps/dir/?api=1&origin=$${userLat},${userLon}&destination=${destEncoded}&travelmode=${gmapMode}`;
-      
-      html += `
-        <a href="${mapsLink}" target="_blank" rel="noopener noreferrer" 
-           class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition">
-          <span>${modeIcon} Start ${modeLabel} Directions</span>
-          <span class="text-xs font-normal opacity-80">(Google Maps)</span>
-        </a>`;
-    }
-    html += `</div>`;
+function handleFormSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('fInput');
+  const message = input.value.trim();
+  if (!message) return;
+
+  appendUserMessage(message);
+  input.value = '';
+
+  sendChatRequest(message, "recommend");
+}
+
+function confirmDestination(placeName, lat, lon) {
+  appendUserMessage(`Yes, let's lock in ${placeName}!`);
+  sendChatRequest(`Confirm destination: ${placeName}`, "confirm", lat, lon);
+}
+
+async function sendChatRequest(message, stage = "recommend", destLat = null, destLon = null) {
+  const loadingId = appendLoadingMessage();
+  const mode = document.getElementById('fMode').value;
+  const radius = parseInt(document.getElementById('fRadius').value);
+
+  const payload = {
+    message: message,
+    user_lat: destLat || cachedUserLat || -36.8485,
+    user_lon: destLon || cachedUserLon || 174.7633,
+    mode: mode,
+    radius_meters: radius,
+    stage: stage
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    removeLoadingMessage(loadingId);
+
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const data = await res.json();
+
+    appendAIMessage(data, stage === "confirm");
+
+  } catch (err) {
+    removeLoadingMessage(loadingId);
+    console.error("Chat error:", err);
+    appendAIMessage({
+      chat_response: "Kia ora! I had trouble connecting to the decision engine. Please make sure the FastAPI server is running.",
+      follow_up_question: "Would you like to try sending your request again?"
+    });
   }
-
-  html += `</div>`;
-  document.getElementById('resultsArea').innerHTML = html;
 }
 
-// ── UTILS ──
-function loadingHTML(title, steps) {
-  const items = steps.map((s, i) =>
-    `<li class="flex items-center gap-2 text-xs text-slate-400">
-      <div class="w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-blue-400 pulse-dot' : 'bg-slate-600'}"></div>${s}
-    </li>`
-  ).join('');
-  return `<div class="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-8 text-center">
-    <div class="spinner w-7 h-7 border-2 border-slate-700 border-t-blue-400 rounded-full mx-auto mb-4"></div>
-    <p class="text-sm font-medium text-slate-300 mb-4">${title}</p>
-    <ul class="space-y-2 text-left max-w-xs mx-auto">${items}</ul>
-  </div>`;
+// ── UTILITIES ──
+function scrollToBottom() {
+  const thread = document.getElementById('chatThread');
+  thread.scrollTop = thread.scrollHeight;
 }
 
-function errorHTML(msg) {
-  return `<div class="bg-red-950/40 border border-red-800 rounded-xl p-4 text-sm text-red-300">
-    <p class="font-medium mb-1">⚠ Error evaluating request</p>
-    <p class="text-xs opacity-75">${msg}</p>
-  </div>`;
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 </script>
 </body>
