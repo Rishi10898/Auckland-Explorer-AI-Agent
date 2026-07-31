@@ -16,6 +16,7 @@ from app.weather import (
     safeswim_background_scheduler,
 )
 
+
 # --- REQUEST & RESPONSE SCHEMAS ---
 class ChatRequest(BaseModel):
     message: str
@@ -25,15 +26,18 @@ class ChatRequest(BaseModel):
     radius_meters: int = 10000
     stage: str = "recommend"  # 'recommend' or 'confirm'
 
+
 class SynthesisRequest(BaseModel):
     prompt: str
 
 
+# --- LIFESPAN BACKGROUND WORKERS ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initiate Safeswim background monitor loop
     bg_task = asyncio.create_task(safeswim_background_scheduler())
     yield
-    bg_task.cancel()
+    bg_task.cancel()  # Gracefully shut down on exit
 
 
 app = FastAPI(lifespan=lifespan)
@@ -48,6 +52,109 @@ app.add_middleware(
 )
 
 
+# --- CONVERSATIONAL CHAT API ENDPOINT ---
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest):
+    """
+    Primary Conversational Endpoint:
+    Engages in dialogue, recommends options across Tāmaki Makaurau with cultural/amenity snippets,
+    and only generates transit links upon explicit user decision/confirmation.
+    """
+    # 1. Geofence Boundary Check (Greater Tāmaki Makaurau area)
+    MIN_LAT, MAX_LAT = -37.3000, -36.3000
+    MIN_LON, MAX_LON = 174.2000, 175.3000
+    if not (MIN_LAT <= request.user_lat <= MAX_LAT and MIN_LON <= request.user_lon <= MAX_LON):
+        raise HTTPException(
+            status_code=400,
+            detail="Access Denied: Location lies outside Greater Tāmaki Makaurau region."
+        )
+
+    # 2. Extract Context Parameters & Weather
+    weather_data = get_auckland_weather()
+    vibe_lower = request.message.lower()
+    category = "BEACH" if ("beach" in vibe_lower or "swim" in vibe_lower) else "PARK_RECREATION_AREA"
+
+    # 3. Soft Context Gathering from TomTom
+    places_list: Optional[List[Dict[str, Any]]] = None
+    try:
+        live_places = get_auckland_places(
+            target_category=category,
+            lat=request.user_lat,
+            lon=request.user_lon,
+            radius_meters=request.radius_meters
+        )
+        places_list = live_places.get("places", [])
+    except Exception:
+        places_list = None
+
+    # 4. Conversational AI Decision Engine (Hugging Face OSS-120B)
+    ai_result = get_cloud_destination_match(
+        user_vibe=request.message,
+        user_lat=request.user_lat,
+        user_lon=request.user_lon,
+        mode=request.mode,
+        radius_meters=request.radius_meters,
+        conversation_stage=request.stage,
+        nearby_places=places_list
+    )
+
+    # 5. Conditional Transit Fetching (Only generated if confirmed)
+    transit_data: List[Dict[str, Any]] = []
+    if ai_result.get("show_transit_links") or request.stage == "confirm":
+        recommended_places = ai_result.get("recommended_places", [])
+        if recommended_places:
+            primary_choice = recommended_places[0]
+            transit_data = await get_transit_options(
+                user_lat=request.user_lat,
+                user_lon=request.user_lon,
+                dest_lat=primary_choice.get("latitude", request.user_lat),
+                dest_lon=primary_choice.get("longitude", request.user_lon)
+            )
+
+    # 6. Environmental Safeswim Protection Layer (Beach verification)
+    safeswim_report: Dict[str, Any] = {
+        "status": "Skipped",
+        "message": "Water safety monitoring inactive for this query category."
+    }
+
+    recommended_places = ai_result.get("recommended_places", [])
+    if recommended_places:
+        top_spot = recommended_places[0]
+        spot_name = top_spot.get("name", "").lower()
+        
+        if "beach" in spot_name or "bay" in spot_name or "cove" in spot_name or "swim" in vibe_lower:
+            matched_beach = match_closest_auckland_beach(
+                top_spot.get("latitude", request.user_lat),
+                top_spot.get("longitude", request.user_lon)
+            )
+            if matched_beach:
+                slug = matched_beach.get("slug")
+                state = matched_beach.get("state", {})
+                if slug and isinstance(slug, str):
+                    detailed_info = await fetch_specific_beach_profile(slug)
+                    safeswim_report = {
+                        "source": "Safeswim Official API",
+                        "beach_name": matched_beach.get("name"),
+                        "water_quality": state.get("quality", "UNKNOWN"),
+                        "patrolled": matched_beach.get("patrolled", False),
+                        "description": detailed_info.get("description"),
+                        "facilities_found": detailed_info.get("facilities"),
+                        "active_hazards": detailed_info.get("hazards")
+                    }
+
+    return {
+        "status": "success",
+        "chat_response": ai_result.get("conversational_response"),
+        "recommended_places": recommended_places,
+        "follow_up_question": ai_result.get("follow_up_question"),
+        "show_transit_links": ai_result.get("show_transit_links", False),
+        "transit_options": transit_data,
+        "safeswim_report": safeswim_report,
+        "weather": weather_data
+    }
+
+
+# --- LEGACY / DIRECT COMPATIBILITY ENDPOINT ---
 @app.get("/api/recommend")
 async def get_recommendation(
     vibe: str = "beach visit swim",
@@ -56,86 +163,17 @@ async def get_recommendation(
     mode: str = "bus",
     radius_meters: int = 10000
 ):
-    # 1. Geofence Check
-    MIN_LAT, MAX_LAT = -37.3000, -36.3000
-    MIN_LON, MAX_LON = 174.2000, 175.3000
-    if not (MIN_LAT <= lat <= MAX_LAT and MIN_LON <= lon <= MAX_LON):
-        raise HTTPException(
-            status_code=400, 
-            detail="Access Denied: Area outside Greater Auckland region."
+    """Direct lookup wrapper mapping directly to the conversational chat pipeline."""
+    return await chat_endpoint(
+        ChatRequest(
+            message=vibe,
+            user_lat=lat,
+            user_lon=lon,
+            mode=mode,
+            radius_meters=radius_meters,
+            stage="recommend"
         )
-
-    # 2. Context Gathering
-    weather_data = get_auckland_weather()
-    vibe_lower = vibe.lower()
-    category = "BEACH" if ("beach" in vibe_lower or "swim" in vibe_lower) else "PARK_RECREATION_AREA"
-
-    places_list: Optional[List[Dict[str, Any]]] = None
-    try:
-        live_places = get_auckland_places(
-            target_category=category, 
-            lat=lat, 
-            lon=lon, 
-            radius_meters=radius_meters
-        )
-        places_list = live_places.get("places", [])
-    except Exception:
-        places_list = None
-
-    # 3. AI Destination Recommendation
-    recommended_destination = get_cloud_destination_match(
-        user_vibe=vibe,
-        user_lat=lat,
-        user_lon=lon,
-        mode=mode,
-        radius_meters=radius_meters,
-        nearby_places=places_list
     )
-
-    # 4. Safeswim Water Quality Matching
-    dest_lat = recommended_destination.get("latitude", lat)
-    dest_lon = recommended_destination.get("longitude", lon)
-    dest_name = recommended_destination.get("name", "").lower()
-
-    safeswim_report: Dict[str, Any] = {
-        "status": "Skipped",
-        "message": "Environmental tracking is not active for this category."
-    }
-
-    if "beach" in dest_name or "bay" in dest_name or "cove" in dest_name or "swim" in vibe_lower:
-        matched_beach = match_closest_auckland_beach(dest_lat, dest_lon)
-        if matched_beach:
-            slug = matched_beach.get("slug")
-            state = matched_beach.get("state", {})
-            if slug and isinstance(slug, str):
-                detailed_info = await fetch_specific_beach_profile(slug)
-                safeswim_report = {
-                    "source": "Safeswim Official API",
-                    "beach_name": matched_beach.get("name"),
-                    "water_quality": state.get("quality", "UNKNOWN"),
-                    "patrolled": matched_beach.get("patrolled", False),
-                    "description": detailed_info.get("description"),
-                    "facilities_found": detailed_info.get("facilities"),
-                    "active_hazards": detailed_info.get("hazards")
-                }
-
-    # 5. Get Transit Routes
-    transit_options = await get_transit_options(
-        user_lat=lat,
-        user_lon=lon,
-        dest_lat=dest_lat,
-        dest_lon=dest_lon
-    )
-
-    return {
-        "status": "success",
-        "chosen_radius_meters": radius_meters,
-        "live_auckland_weather": weather_data,
-        "recommended_place": recommended_destination,
-        "transit_options": transit_options,
-        "safeswim_environmental_report": safeswim_report,
-        "mode_requested": mode
-    }
 
 
 @app.post("/api/synthesis")
