@@ -1,61 +1,112 @@
 import os
 import json
+from typing import Optional, List, Dict, Any
 from openai import OpenAI
 from app.config import settings
 
-def get_cloud_destination_match(user_vibe: str, nearby_places: list) -> dict:
+
+def get_cloud_destination_match(
+    user_vibe: str,
+    user_lat: float = -36.8485,
+    user_lon: float = 174.7633,
+    mode: str = "bus",
+    radius_meters: int = 10000,
+    conversation_stage: str = "recommend",
+    nearby_places: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
     """
-    Uses OpenAI's gpt-oss-120b hosted serverless on Hugging Face to match
-    the user's vibe to a specific physical location.
+    Uses OpenAI's gpt-oss-120b model hosted on Hugging Face as an interactive decision engine.
+    Analyzes vibe/prompt within search radius, incorporates Tāmaki Makaurau cultural values,
+    and returns narrowed recommendations prior to confirming transit details.
     """
     hf_token = getattr(settings, "HUGGINGFACE_API_KEY", None)
-    if not hf_token:
-        # Safety fallback if token isn't initialized
-        return nearby_places[0] if nearby_places else {}
 
-    # 1. Initialize the OpenAI client pointing to the Hugging Face Router
+    # Fallback structure if Hugging Face token is not set
+    if not hf_token:
+        fallback = nearby_places[0] if nearby_places else {}
+        return {
+            "conversational_response": "Kia ora! I am having trouble connecting to my decision engine. Here is a default suggestion in Tāmaki Makaurau.",
+            "recommended_places": [{
+                "name": fallback.get("name", "Takapuna Beach / Waitematā"),
+                "suburb": fallback.get("suburb", "Tāmaki Makaurau"),
+                "cultural_significance": "A prominent coastal landmark along the Waitematā with views of Rangitoto Island.",
+                "popular_for": "Swimming, coastal walks, paddleboarding, and local dining.",
+                "nearby_attractions": "Takapuna Beach Reserve, Lake Pupuke, and local market shops.",
+                "amenities": ["Public restrooms", "Cafes", "Parking", "Lifeguard patrols"],
+                "auckland_council_url": "https://www.aucklandcouncil.govt.nz/parks-recreation/Pages/default.aspx",
+                "latitude": fallback.get("latitude", user_lat),
+                "longitude": fallback.get("longitude", user_lon)
+            }],
+            "show_transit_links": False,
+            "follow_up_question": "Does Takapuna Beach sound ideal for your trip, or would you prefer a different area?"
+        }
+
+    # Initialize OpenAI client pointing to Hugging Face Inference Router
     client = OpenAI(
         base_url="https://router.huggingface.co/v1",
         api_key=hf_token
     )
 
-    # 2. Build our available geographic options context string
+    # Construct context from TomTom category search
     places_context = ""
-    for idx, p in enumerate(nearby_places):
-        places_context += f"- Option Name: {p['name']} (Lat: {p['latitude']}, Lon: {p['longitude']})\n"
+    if nearby_places:
+        places_context = "Discovered Candidate Places in Search Radius:\n"
+        for p in nearby_places:
+            places_context += f"- {p.get('name')} | Address: {p.get('formatted_address')} | Distance: {p.get('distance_meters')}m\n"
 
-    # 3. Request completion using gpt-oss-120b via one of its ultra-fast inference providers (like fireworks-ai)
+    system_prompt = (
+        "You are an expert conversational AI travel guide for Tāmaki Makaurau (Auckland).\n"
+        "Your role is to converse naturally with the user and narrow down the best places to visit.\n\n"
+        "MANDATORY GUIDELINES:\n"
+        "1. Always refer to Tāmaki Makaurau alongside or in place of 'Auckland'.\n"
+        "2. NARROW DOWN choices: Select 1 to 3 top places matching the user's vibe, travel mode, and search radius.\n"
+        "3. Provide cultural snippets: Include the cultural heritage or local history of the location, popular highlights, nearby attractions, and key amenities (e.g. restrooms, parking, cafes).\n"
+        "4. Include official links: Provide a valid Auckland Council or Regional park URL for users to verify history and details.\n"
+        "5. DO NOT throw navigation links immediately! Converse first. Ask the user if they want to confirm or explore a specific spot.\n"
+        "6. Set 'show_transit_links' to true ONLY if conversation_stage is 'confirm'. Otherwise, set it to false.\n\n"
+        "CRITICAL: Respond STRICTLY in raw JSON matching this schema (no markdown formatting code blocks):\n"
+        "{\n"
+        '  "conversational_response": "Warm, engaging intro message greeting the user in Tāmaki Makaurau.",\n'
+        '  "recommended_places": [\n'
+        "    {\n"
+        '      "name": "Place Name",\n'
+        '      "suburb": "Suburb / Region in Tāmaki Makaurau",\n'
+        '      "cultural_significance": "Cultural or historical context of the site",\n'
+        '      "popular_for": "Main highlights and activities",\n'
+        '      "nearby_attractions": "Surrounding places to explore",\n'
+        '      "amenities": ["Restrooms", "Cafes", "Parking"],\n'
+        '      "auckland_council_url": "https://www.aucklandcouncil.govt.nz/...",\n'
+        '      "latitude": -36.xxxx,\n'
+        '      "longitude": 174.xxxx\n'
+        "    }\n"
+        "  ],\n"
+        '  "show_transit_links": false,\n'
+        '  "follow_up_question": "A friendly question asking the user to confirm their choice or refine their search."\n'
+        "}"
+    )
+
+    user_content = (
+        f"User Query/Vibe: '{user_vibe}'\n"
+        f"Conversation Stage: '{conversation_stage}'\n"
+        f"Selected Travel Mode: '{mode}'\n"
+        f"User Search Radius: {radius_meters / 1000:.1f} km\n"
+        f"User GPS Location: ({user_lat}, {user_lon})\n"
+        f"{places_context}"
+    )
+
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b:fireworks-ai",
             messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a local Auckland Travel Assistant agent. Your job is to pick the single BEST "
-                        "destination from the provided options that matches the user's vibe. "
-                        "You MUST respond ONLY with a raw JSON object string. Do not write markdown blocks (like ```json), "
-                        "do not write pleasantries. Strictly follow this output schema structure:\n"
-                        "{\n"
-                        '  "name": "The chosen place name",\n'
-                        '  "latitude": chosen_lat_float,\n'
-                        '  "longitude": chosen_lon_float,\n'
-                        '  "ai_reasoning": "A concise, engaging 2-sentence explanation of why this spot perfectly fits their vibe."\n'
-                        "}"
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": f"User vibe preference: '{user_vibe}'.\nAvailable Options:\n{places_context}"
-                }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content}
             ],
-            temperature=0.1
+            temperature=0.3
         )
 
-        # 4. Extract and clean the generated string message content text
         raw_content = (response.choices[0].message.content or "").strip()
-        
-        # Clean up code blocks if the model wrapped it anyway
+
+        # Sanitize code fence wrappers if present in model output
         if "```json" in raw_content:
             raw_content = raw_content.split("```json")[1].split("```")[0].strip()
         elif "```" in raw_content:
@@ -64,29 +115,30 @@ def get_cloud_destination_match(user_vibe: str, nearby_places: list) -> dict:
         return json.loads(raw_content)
 
     except Exception as e:
-        print(f"GPT-OSS-120b Router Fallback Triggered: {e}")
-        # Default safe object fallback state structure if parsing hits an error boundary
-        return nearby_places[0] if nearby_places else {}
+        print(f"GPT-OSS-120B Decision Error: {e}")
+        fallback = nearby_places[0] if nearby_places else {}
+        return {
+            "conversational_response": "Kia ora! I encountered an error searching across Tāmaki Makaurau. Here is a recommended spot near you.",
+            "recommended_places": [{
+                "name": fallback.get("name", "Auckland Domain / Pukekawa"),
+                "suburb": "Grafton, Tāmaki Makaurau",
+                "cultural_significance": "Centered on Pukekawa, an ancient volcanic crater with deep historical significance in Tāmaki Makaurau.",
+                "popular_for": "Auckland War Memorial Museum, Wintergardens, and duck ponds.",
+                "nearby_attractions": "Parnell Village and the Domain Wintergardens.",
+                "amenities": ["Parking", "Restrooms", "Cafes", "Wheelchair access"],
+                "auckland_council_url": "https://www.aucklandcouncil.govt.nz/parks-recreation/Pages/default.aspx",
+                "latitude": fallback.get("latitude", user_lat),
+                "longitude": fallback.get("longitude", user_lon)
+            }],
+            "show_transit_links": False,
+            "follow_up_question": "Would you like me to look up transit routes to Pukekawa, or refine your search?"
+        }
+
+
 def get_ai_synthesis(full_prompt: str) -> str:
     """
-    Sends the fully assembled context (weather + places + safeswim +
-    budget analysis + transit fares) to gpt-oss-120b via Hugging Face
-    and returns a plain-English synthesis for the user.
-
-    HOW THE AI IS ACCESSED:
-    - Client: openai Python SDK (pip install openai)
-    - base_url: https://router.huggingface.co/v1  ← Hugging Face Inference Router
-    - api_key:  your HUGGINGFACE_API_KEY from .env
-    - model:    openai/gpt-oss-120b:fireworks-ai
-      - This is OpenAI's gpt-oss-120b model
-      - Hosted serverlessly by Hugging Face
-      - Routed through Fireworks AI as the inference backend
-      - Billed to your Hugging Face account (not OpenAI directly)
+    Generates a plain-English trip synthesis using gpt-oss-120b on Hugging Face.
     """
-    import json
-    from openai import OpenAI
-    from app.config import settings
-
     hf_token = getattr(settings, "HUGGINGFACE_API_KEY", None)
     if not hf_token:
         return "AI synthesis unavailable — HUGGINGFACE_API_KEY not set in .env"
@@ -99,12 +151,7 @@ def get_ai_synthesis(full_prompt: str) -> str:
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b:fireworks-ai",
-            messages=[
-                {
-                    "role": "user",
-                    "content": full_prompt
-                }
-            ],
+            messages=[{"role": "user", "content": full_prompt}],
             temperature=0.3,
             max_tokens=400
         )
