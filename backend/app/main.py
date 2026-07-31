@@ -16,6 +16,14 @@ from app.weather import (
     safeswim_background_scheduler,
 )
 
+# --- REQUEST & RESPONSE SCHEMAS ---
+class ChatRequest(BaseModel):
+    message: str
+    user_lat: float = -36.8485
+    user_lon: float = 174.7633
+    mode: str = "bus"
+    radius_meters: int = 10000
+    stage: str = "recommend"  # 'recommend' or 'confirm'
 
 class SynthesisRequest(BaseModel):
     prompt: str
