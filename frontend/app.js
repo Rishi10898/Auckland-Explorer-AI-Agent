@@ -103,3 +103,82 @@ function updateGeoStatus(state, message) {
         geoStatusDot.classList.add("bg-amber-400", "animate-pulse");
     }
 }
+// Function to get the user's location cleanly with local caching
+function getUserLocation(callback) {
+    const cachedLat = localStorage.getItem("user_lat");
+    const cachedLon = localStorage.getItem("user_lon");
+
+    // 1. Check if location is already saved in localStorage
+    if (cachedLat && cachedLon) {
+        console.log("Loaded cached location from localStorage:", cachedLat, cachedLon);
+        callback({
+            lat: parseFloat(cachedLat),
+            lon: parseFloat(cachedLon)
+        });
+        return;
+    }
+
+    // 2. If not saved, check if the browser supports Geolocation
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                // Save to localStorage for future reloads
+                localStorage.setItem("user_lat", lat);
+                localStorage.setItem("user_lon", lon);
+
+                console.log("New location acquired and saved:", lat, lon);
+                callback({ lat, lon });
+            },
+            (error) => {
+                console.warn("Location permission denied or unavailable:", error.message);
+                // Fallback to Central Auckland / Tāmaki Makaurau coordinates (-36.8485, 174.7633)
+                const defaultLocation = { lat: -36.8485, lon: 174.7633 };
+                callback(defaultLocation);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 3600000 // Cache browser position for 1 hour
+            }
+        );
+    } else {
+        // Fallback for unsupported browsers
+        callback({ lat: -36.8485, lon: 174.7633 });
+    }
+}
+
+// Function to let the user manually update their location
+function resetUserLocation() {
+    localStorage.removeItem("user_lat");
+    localStorage.removeItem("user_lon");
+    alert("Location reset! Refreshing position...");
+    getUserLocation((coords) => {
+        console.log("Updated position:", coords);
+        window.location.reload();
+    });
+}
+async function sendChatMessage(userMessage) {
+    // Retrieve coordinates (will instantly grab from localStorage if reloaded)
+    getUserLocation(async (coords) => {
+        const payload = {
+            message: userMessage,
+            user_lat: coords.lat,
+            user_lon: coords.lon,
+            mode: "bus", // or grab from your UI dropdown
+            radius_meters: 10000,
+            stage: "recommend"
+        };
+
+        const response = await fetch("http://localhost:8000/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        console.log("Backend response:", data);
+    });
+}
