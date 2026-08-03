@@ -94,51 +94,81 @@
 
 <script>
 const API_URL = 'http://127.0.0.1:8000/api/chat';
-let cachedUserLat = null, cachedUserLon = null;
+let cachedUserLat = -36.8485;
+let cachedUserLon = 174.7633;
+let cachedSuburb = "Central Auckland";
 
-// ── 1. GEOLOCATION WITH LOCALSTORAGE PERSISTENCE ──
-function initUserLocation() {
+// ── 1. PRECISE LOCATION LOGIC & REVERSE GEOCODING ──
+async function fetchSuburbName(lat, lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`);
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address || {};
+      return addr.neighbourhood || addr.suburb || addr.residential || addr.village || addr.town || addr.city || "Tāmaki Makaurau";
+    }
+  } catch (err) {
+    console.warn("Reverse geocode failed:", err);
+  }
+  return "Tāmaki Makaurau";
+}
+
+async function acquirePreciseLocation(forceRefresh = false) {
+  setGeoStatus('loading', 'Locating Precise Position…');
+
   const savedLat = localStorage.getItem('tm_user_lat');
   const savedLon = localStorage.getItem('tm_user_lon');
+  const savedSuburb = localStorage.getItem('tm_suburb');
 
-  if (savedLat && savedLon) {
+  if (!forceRefresh && savedLat && savedLon && savedSuburb) {
     cachedUserLat = parseFloat(savedLat);
     cachedUserLon = parseFloat(savedLon);
-    setGeoStatus('active', 'Location Cached');
+    cachedSuburb = savedSuburb;
+    setGeoStatus('active', `Position: ${cachedSuburb}`);
     return;
   }
 
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
-      pos => {
+      async (pos) => {
         cachedUserLat = pos.coords.latitude;
         cachedUserLon = pos.coords.longitude;
+        cachedSuburb = await fetchSuburbName(cachedUserLat, cachedUserLon);
+
         localStorage.setItem('tm_user_lat', cachedUserLat);
         localStorage.setItem('tm_user_lon', cachedUserLon);
-        setGeoStatus('active', 'Auckland GPS Fixed');
+        localStorage.setItem('tm_suburb', cachedSuburb);
+
+        setGeoStatus('active', `Position: ${cachedSuburb}`);
       },
-      err => {
-        console.warn("Geolocation permission denied or failed. Using Auckland Central fallback.", err);
+      async (err) => {
+        console.warn("Geolocation permission rejected or unavailable.", err);
         cachedUserLat = -36.8485;
         cachedUserLon = 174.7633;
-        setGeoStatus('error', 'Auckland Central (Fallback)');
+        cachedSuburb = "Central Auckland";
+        setGeoStatus('error', `Position: ${cachedSuburb}`);
       },
-      { enableHighAccuracy: true, timeout: 5000 }
+      { enableHighAccuracy: true, timeout: 7000 }
     );
   } else {
     cachedUserLat = -36.8485;
     cachedUserLon = 174.7633;
-    setGeoStatus('error', 'Auckland Central (Fallback)');
+    cachedSuburb = "Central Auckland";
+    setGeoStatus('error', `Position: ${cachedSuburb}`);
   }
 }
 
 function setGeoStatus(type, label) {
   const dot = document.getElementById('geoDot');
   const txt = document.getElementById('geoLabel');
+  if (!dot || !txt) return;
+
   dot.className = 'w-2 h-2 rounded-full';
-  
+
   if (type === 'active') {
     dot.classList.add('bg-emerald-400');
+  } else if (type === 'loading') {
+    dot.classList.add('bg-amber-400', 'pulse-dot');
   } else {
     dot.classList.add('bg-rose-400');
   }
@@ -148,11 +178,12 @@ function setGeoStatus(type, label) {
 function resetUserLocation() {
   localStorage.removeItem('tm_user_lat');
   localStorage.removeItem('tm_user_lon');
-  alert("Cleared cached coordinates. Refreshing position...");
-  window.location.reload();
+  localStorage.removeItem('tm_suburb');
+  acquirePreciseLocation(true);
 }
 
-initUserLocation();
+// Initialize location on start
+acquirePreciseLocation();
 
 // ── 2. CHAT RENDERING ENGINE ──
 function appendUserMessage(text) {
