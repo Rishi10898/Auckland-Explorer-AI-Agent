@@ -1,161 +1,341 @@
 import os
 import json
-from typing import Optional, List, Dict, Any
-from openai import OpenAI
-from app.config import settings
+
+from google import genai
+from google.genai import types
+
+from schemas import DestinationMatchItem
+from weather import get_auckland_weather
+from places import get_auckland_places
 
 
-def get_cloud_destination_match(
-    user_vibe: str,
-    user_lat: float = -36.8485,
-    user_lon: float = 174.7633,
-    mode: str = "bus",
-    radius_meters: int = 10000,
-    conversation_stage: str = "recommend",
-    nearby_places: Optional[List[Dict[str, Any]]] = None
-) -> Dict[str, Any]:
+# Gemini model used for recommendation reasoning.
+GEMINI_MODEL = "gemini-2.5-flash-lite"
+
+
+def get_gemini_client():
     """
-    Uses OpenAI's gpt-oss-120b model hosted on Hugging Face as an interactive decision engine.
-    Analyzes vibe/prompt within search radius, incorporates Tāmaki Makaurau cultural values,
-    and returns narrowed recommendations prior to confirming transit details.
+    Creates a Gemini client using the API key
+    stored in the environment.
     """
-    hf_token = getattr(settings, "HUGGINGFACE_API_KEY", None)
 
-    # Fallback structure if Hugging Face token is not set
-    if not hf_token:
-        fallback = nearby_places[0] if nearby_places else {}
-        return {
-            "conversational_response": "Kia ora! I am having trouble connecting to my decision engine. Here is a default suggestion in Tāmaki Makaurau.",
-            "recommended_places": [{
-                "name": fallback.get("name", "Takapuna Beach / Waitematā"),
-                "suburb": fallback.get("suburb", "Tāmaki Makaurau"),
-                "cultural_significance": "A prominent coastal landmark along the Waitematā with views of Rangitoto Island.",
-                "popular_for": "Swimming, coastal walks, paddleboarding, and local dining.",
-                "nearby_attractions": "Takapuna Beach Reserve, Lake Pupuke, and local market shops.",
-                "amenities": ["Public restrooms", "Cafes", "Parking", "Lifeguard patrols"],
-                "auckland_council_url": "https://www.aucklandcouncil.govt.nz/parks-recreation/Pages/default.aspx",
-                "latitude": fallback.get("latitude", user_lat),
-                "longitude": fallback.get("longitude", user_lon)
-            }],
-            "show_transit_links": False,
-            "follow_up_question": "Does Takapuna Beach sound ideal for your trip, or would you prefer a different area?"
-        }
+    # Read the Gemini API key from the environment.
+    api_key = os.getenv("GEMINI_API_KEY")
 
-    # Initialize OpenAI client pointing to Hugging Face Inference Router
-    client = OpenAI(
-        base_url="https://router.huggingface.co/v1",
-        api_key=hf_token
-    )
-
-    # Construct context from TomTom category search
-    places_context = ""
-    if nearby_places:
-        places_context = "Discovered Candidate Places in Search Radius:\n"
-        for p in nearby_places:
-            places_context += f"- {p.get('name')} | Address: {p.get('formatted_address')} | Distance: {p.get('distance_meters')}m\n"
-
-    system_prompt = (
-        "You are an expert conversational AI travel guide for Tāmaki Makaurau (Auckland).\n"
-        "Your role is to converse naturally with the user and narrow down the best places to visit.\n\n"
-        "MANDATORY GUIDELINES:\n"
-        "1. Always refer to Tāmaki Makaurau alongside or in place of 'Auckland'.\n"
-        "2. NARROW DOWN choices: Select 1 to 3 top places matching the user's vibe, travel mode, and search radius.\n"
-        "3. Provide cultural snippets: Include the cultural heritage or local history of the location, popular highlights, nearby attractions, and key amenities (e.g. restrooms, parking, cafes).\n"
-        "4. Include official links: Provide a valid Auckland Council or Regional park URL for users to verify history and details.\n"
-        "5. DO NOT throw navigation links immediately! Converse first. Ask the user if they want to confirm or explore a specific spot.\n"
-        "6. Set 'show_transit_links' to true ONLY if conversation_stage is 'confirm'. Otherwise, set it to false.\n\n"
-        "CRITICAL: Respond STRICTLY in raw JSON matching this schema (no markdown formatting code blocks):\n"
-        "{\n"
-        '  "conversational_response": "Warm, engaging intro message greeting the user in Tāmaki Makaurau.",\n'
-        '  "recommended_places": [\n'
-        "    {\n"
-        '      "name": "Place Name",\n'
-        '      "suburb": "Suburb / Region in Tāmaki Makaurau",\n'
-        '      "cultural_significance": "Cultural or historical context of the site",\n'
-        '      "popular_for": "Main highlights and activities",\n'
-        '      "nearby_attractions": "Surrounding places to explore",\n'
-        '      "amenities": ["Restrooms", "Cafes", "Parking"],\n'
-        '      "auckland_council_url": "https://www.aucklandcouncil.govt.nz/...",\n'
-        '      "latitude": -36.xxxx,\n'
-        '      "longitude": 174.xxxx\n'
-        "    }\n"
-        "  ],\n"
-        '  "show_transit_links": false,\n'
-        '  "follow_up_question": "A friendly question asking the user to confirm their choice or refine their search."\n'
-        "}"
-    )
-
-    user_content = (
-        f"User Query/Vibe: '{user_vibe}'\n"
-        f"Conversation Stage: '{conversation_stage}'\n"
-        f"Selected Travel Mode: '{mode}'\n"
-        f"User Search Radius: {radius_meters / 1000:.1f} km\n"
-        f"User GPS Location: ({user_lat}, {user_lon})\n"
-        f"{places_context}"
-    )
-
-    try:
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b:fireworks-ai",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content}
-            ],
-            temperature=0.3
+    # Stop if the API key has not been configured.
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured."
         )
 
-        raw_content = (response.choices[0].message.content or "").strip()
-
-        # Sanitize code fence wrappers if present in model output
-        if "```json" in raw_content:
-            raw_content = raw_content.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_content:
-            raw_content = raw_content.split("```")[1].split("```")[0].strip()
-
-        return json.loads(raw_content)
-
-    except Exception as e:
-        print(f"GPT-OSS-120B Decision Error: {e}")
-        fallback = nearby_places[0] if nearby_places else {}
-        return {
-            "conversational_response": "Kia ora! I encountered an error searching across Tāmaki Makaurau. Here is a recommended spot near you.",
-            "recommended_places": [{
-                "name": fallback.get("name", "Auckland Domain / Pukekawa"),
-                "suburb": "Grafton, Tāmaki Makaurau",
-                "cultural_significance": "Centered on Pukekawa, an ancient volcanic crater with deep historical significance in Tāmaki Makaurau.",
-                "popular_for": "Auckland War Memorial Museum, Wintergardens, and duck ponds.",
-                "nearby_attractions": "Parnell Village and the Domain Wintergardens.",
-                "amenities": ["Parking", "Restrooms", "Cafes", "Wheelchair access"],
-                "auckland_council_url": "https://www.aucklandcouncil.govt.nz/parks-recreation/Pages/default.aspx",
-                "latitude": fallback.get("latitude", user_lat),
-                "longitude": fallback.get("longitude", user_lon)
-            }],
-            "show_transit_links": False,
-            "follow_up_question": "Would you like me to look up transit routes to Pukekawa, or refine your search?"
-        }
+    # Create and return the Gemini client.
+    return genai.Client(api_key=api_key)
 
 
-def get_ai_synthesis(full_prompt: str) -> str:
+async def generate_location_recommendations(
+    user_prompt: str,
+    lat: float,
+    lon: float,
+    user_preferences: dict
+) -> list[DestinationMatchItem]:
     """
-    Generates a plain-English trip synthesis using gpt-oss-120b on Hugging Face.
-    """
-    hf_token = getattr(settings, "HUGGINGFACE_API_KEY", None)
-    if not hf_token:
-        return "AI synthesis unavailable — HUGGINGFACE_API_KEY not set in .env"
+    Main recommendation pipeline.
 
-    client = OpenAI(
-        base_url="https://router.huggingface.co/v1",
-        api_key=hf_token
+    1. Gets live weather.
+    2. Attempts to get live places from TomTom.
+    3. If TomTom works, Gemini ranks those real places.
+    4. If TomTom fails, Gemini uses Google Search to find real places.
+    5. Never intentionally invents a destination.
+    """
+
+    # ---------------------------------------------------------
+    # STEP 1 — GET LIVE WEATHER
+    # ---------------------------------------------------------
+
+    weather = get_auckland_weather(
+        lat=lat,
+        lon=lon
     )
 
-    try:
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-120b:fireworks-ai",
-            messages=[{"role": "user", "content": full_prompt}],
-            temperature=0.3,
-            max_tokens=400
+    # Do not make recommendations using fake/outdated weather.
+    if weather["status"] != "success":
+        raise RuntimeError(
+            "LIVE_WEATHER_UNAVAILABLE"
         )
-        return (response.choices[0].message.content or "").strip()
-    except Exception as e:
-        print(f"AI synthesis error: {e}")
-        return f"AI synthesis unavailable: {str(e)}"
+
+    # ---------------------------------------------------------
+    # STEP 2 — READ USER PREFERENCES
+    # ---------------------------------------------------------
+
+    # Preferences come from the frontend.
+    #
+    # Example:
+    #
+    # {
+    #     "categories": ["BEACH", "PARK"],
+    #     "budget": 30,
+    #     "transport": "public_transport"
+    # }
+
+    preferred_categories = user_preferences.get(
+        "categories",
+        []
+    )
+
+    # ---------------------------------------------------------
+    # STEP 3 — TRY TOMTOM
+    # ---------------------------------------------------------
+
+    tomtom_places = []
+
+    # Search TomTom for each category selected by the user.
+    for category in preferred_categories:
+
+        result = get_auckland_places(
+            target_category=category,
+            lat=lat,
+            lon=lon
+        )
+
+        # Only use places when TomTom successfully returned data.
+        if result["status"] == "success":
+            tomtom_places.extend(
+                result.get("places", [])
+            )
+
+    # ---------------------------------------------------------
+    # STEP 4 — TOMTOM SUCCESS
+    # ---------------------------------------------------------
+
+    if tomtom_places:
+
+        # Gemini chooses the best places from the
+        # real places returned by TomTom.
+        return await ask_gemini_to_rank_places(
+            user_prompt=user_prompt,
+            user_preferences=user_preferences,
+            weather=weather,
+            places=tomtom_places
+        )
+
+    # ---------------------------------------------------------
+    # STEP 5 — TOMTOM FAILED
+    # ---------------------------------------------------------
+
+    # No places were obtained from TomTom.
+    # Use Gemini's Google Search grounding as the fallback.
+    return await ask_gemini_to_search_places(
+        user_prompt=user_prompt,
+        user_preferences=user_preferences,
+        weather=weather,
+        lat=lat,
+        lon=lon
+    )
+
+
+async def ask_gemini_to_rank_places(
+    user_prompt: str,
+    user_preferences: dict,
+    weather: dict,
+    places: list
+) -> list[DestinationMatchItem]:
+    """
+    Gives real TomTom places to Gemini and asks it
+    to select the most suitable destinations.
+    """
+
+    # Create Gemini client.
+    client = get_gemini_client()
+
+    # Give Gemini the user's request, preferences,
+    # current weather and REAL places from TomTom.
+    prompt = f"""
+You are Auckland Explorer's recommendation engine.
+
+USER REQUEST:
+{user_prompt}
+
+USER PREFERENCES:
+{json.dumps(user_preferences)}
+
+CURRENT WEATHER:
+{json.dumps(weather)}
+
+REAL PLACES FROM TOMTOM:
+{json.dumps(places)}
+
+Choose the best places for the user.
+
+IMPORTANT RULES:
+- Only recommend places from the REAL PLACES list.
+- Do not invent a destination.
+- Consider the user's preferences.
+- Consider the current weather.
+- Return no more than 5 places.
+- Keep the recommendations relevant to the user's request.
+
+Return JSON in exactly this structure:
+
+{{
+    "recommendations": [
+        {{
+            "place_name": "...",
+            "category": "...",
+            "relevance_rationale": "...",
+            "auckland_council_url": "https://..."
+        }}
+    ]
+}}
+"""
+
+    # Ask Gemini to process the real data.
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+            response_mime_type="application/json"
+        )
+    )
+
+    # Gemini's response.text can be either a string or None.
+    response_text = response.text
+
+    # If Gemini returned no text, stop instead of
+    # passing None into json.loads().
+    if response_text is None:
+        raise RuntimeError(
+            "GEMINI_EMPTY_RESPONSE"
+        )
+
+    # Convert Gemini's JSON string into a Python dictionary.
+    data = json.loads(response_text)
+
+    # Get the recommendation list from Gemini's response.
+    recommendations = data.get(
+        "recommendations",
+        []
+    )
+
+    # Convert each recommendation into a Pydantic
+    # DestinationMatchItem so the output is validated.
+    return [
+        DestinationMatchItem(**item)
+        for item in recommendations[:5]
+    ]
+
+
+async def ask_gemini_to_search_places(
+    user_prompt: str,
+    user_preferences: dict,
+    weather: dict,
+    lat: float,
+    lon: float
+) -> list[DestinationMatchItem]:
+    """
+    Fallback place-discovery system.
+
+    Used when TomTom cannot provide live places.
+
+    Gemini uses Google Search grounding to find
+    real places instead of using hardcoded destinations.
+    """
+
+    # Create Gemini client.
+    client = get_gemini_client()
+
+    # Tell Gemini to search for real places.
+    prompt = f"""
+You are Auckland Explorer's fallback live-place discovery system.
+
+The TomTom place-search service is currently unavailable.
+
+Use Google Search to find REAL and CURRENT places in Auckland.
+
+USER REQUEST:
+{user_prompt}
+
+USER PREFERENCES:
+{json.dumps(user_preferences)}
+
+USER LOCATION:
+latitude={lat}
+longitude={lon}
+
+CURRENT WEATHER:
+{json.dumps(weather)}
+
+IMPORTANT RULES:
+- Search for real places.
+- Do not invent destinations.
+- Verify that the places actually exist.
+- Prefer official Auckland Council or official venue websites.
+- Consider the user's preferences.
+- Consider the current weather.
+- Return no more than 5 recommendations.
+- Include a source URL for every recommendation.
+
+Return JSON in exactly this structure:
+
+{{
+    "recommendations": [
+        {{
+            "place_name": "...",
+            "category": "...",
+            "relevance_rationale": "...",
+            "auckland_council_url": "https://..."
+        }}
+    ]
+}}
+"""
+
+    try:
+
+        # Ask Gemini to use Google Search to find current information.
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.2,
+                tools=[
+                    types.Tool(
+                        google_search=types.GoogleSearch()
+                    )
+                ],
+                response_mime_type="application/json"
+            )
+        )
+
+        # Gemini's text response may be None.
+        response_text = response.text
+
+        # Check before passing it to json.loads().
+        if response_text is None:
+            raise RuntimeError(
+                "GEMINI_EMPTY_RESPONSE"
+            )
+
+        # Convert Gemini's JSON string into a Python dictionary.
+        data = json.loads(response_text)
+
+        # Extract the recommendations.
+        recommendations = data.get(
+            "recommendations",
+            []
+        )
+
+        # Validate each recommendation using schemas.py.
+        return [
+            DestinationMatchItem(**item)
+            for item in recommendations[:5]
+        ]
+
+    except Exception as exc:
+
+        # Both the original place-search route and
+        # the fallback search route have failed.
+        #
+        # We deliberately DO NOT invent a destination.
+        raise RuntimeError(
+            "LIVE_PLACE_SEARCH_UNAVAILABLE"
+        ) from exc
