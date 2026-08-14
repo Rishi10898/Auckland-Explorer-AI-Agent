@@ -1,87 +1,127 @@
-"""
-Auckland Explorer AI Agent - Primary Server Core Engine Execution Hub
-Aligns with NCEA Level 3 Digital Technologies (91903, 91906, 91907).
-Orchestrates request filtering, validation parsing, and external service synthesis.
-"""
-
-from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi import FastAPI, HTTPException, status, Body
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
 
-# Import schema configurations and services interface components
-from schemas import GeolocationCoordinates, DestinationMatchResponse, DestinationMatchItem
+from schemas import GeolocationCoordinates, DestinationMatchResponse
 from services import fetch_realtime_environmental_alerts
+from ai import generate_location_recommendations
 
-# Initialize logger configuration architecture
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 logger = logging.getLogger("auckland_explorer.core")
+
 
 app = FastAPI(
     title="Tāmaki Makaurau Auckland Explorer Core Engine API",
-    version="1.0.0",
-    description="Production grade NCEA portfolio core backend implementation exposing structural AI processing utilities."
+    version="1.0.0"
 )
 
-# Apply CORS constraints protecting platform transaction boundaries (91903 / 91906)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Tighten down within production configurations to designated host targets
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
+
 @app.post(
-    "/api/v1/recommendations", 
+    "/api/v1/recommendations",
     response_model=DestinationMatchResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Generate contextual location destination match selections inside Auckland geofence limits."
+    status_code=status.HTTP_200_OK
 )
 async def generate_regional_destination_matches(
     coordinates: GeolocationCoordinates,
-    user_intent_prompt: str
+    user_intent_prompt: str,
+    user_preferences: dict = Body(default={})
 ):
     """
-    Processes incoming request payloads, evaluates query intent patterns, executes safety checks, 
-    and synthesizes results into a validated data structure.
-    
-    NCEA Excellence Evidence: Non-blocking async execution structure combined with active runtime schema checks.
+    Receives the user's location, request and preferences,
+    then sends them to the AI recommendation pipeline.
     """
-    logger.info(f"Received operational request stream targeting coordinates within geofence limits.")
-    
-    # 1. Asynchronously retrieve environmental safety notices without blocking the application thread loop
-    environmental_alert = await fetch_realtime_environmental_alerts(coordinates)
-    
-    # 2. Mock processing logic representing the underlying data resolution layer
-    # In a live production environment, this interfaces with internal vector stores or large language models
+
+    logger.info(
+        "Received request targeting user coordinates."
+    )
+
     try:
-        # Example structured mock payload passing all validation checks
-        mock_processed_destinations = [
-            DestinationMatchItem(
-                place_name="Takapuna Beach",
-                category="BEACH",
-                relevance_rationale="Matches intent for safe ocean swimming options located near urban amenities.",
-                auckland_council_url="https://www.aucklandcouncil.govt.nz/parks-recreation/Pages/park-details.aspx?Location=224"
+
+        # Get the current environmental/safety information.
+        environmental_alert = (
+            await fetch_realtime_environmental_alerts(
+                coordinates
             )
-        ]
-        
-        # 3. Form and return the validated final response object mapping data contracts
-        validated_payload = DestinationMatchResponse(
-            cultural_greeting="Tēnā koe! Welcome to beautiful Tāmaki Makaurau (Auckland).",
-            recommended_destinations=mock_processed_destinations,
-            environmental_safety_notice=environmental_alert
-        )
-        
-        return validated_payload
-        
-    except Exception as err:
-        logger.error(f"Internal generation logic encountered unhandled mapping exception processing failure: {str(err)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal engine processing pipeline failure experienced while preparing destination arrays."
         )
 
+        # Send the user's ACTUAL coordinates and preferences
+        # into the recommendation engine.
+        processed_destinations = (
+            await generate_location_recommendations(
+                user_prompt=user_intent_prompt,
+                lat=coordinates.latitude,
+                lon=coordinates.longitude,
+                user_preferences=user_preferences
+            )
+        )
+
+        # Build the final validated API response.
+        return DestinationMatchResponse(
+            cultural_greeting=(
+                "Tēnā koe! Welcome to beautiful "
+                "Tāmaki Makaurau (Auckland)."
+            ),
+            recommended_destinations=processed_destinations,
+            environmental_safety_notice=environmental_alert
+        )
+
+    except RuntimeError as err:
+
+        logger.error(
+            f"Recommendation service failed: {str(err)}"
+        )
+
+        # Don't return fake recommendations.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "success": False,
+                "error_code": str(err),
+                "message": (
+                    "Oops! We couldn't retrieve live "
+                    "information right now. Please try again."
+                )
+            }
+        )
+
+    except Exception as err:
+
+        logger.exception(
+            "Unexpected recommendation error."
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "success": False,
+                "error_code": "INTERNAL_SERVER_ERROR",
+                "message": (
+                    "Oops! Something went wrong. "
+                    "Please try again."
+                )
+            }
+        )
+
+
 if __name__ == "__main__":
-    # Launch system server execution process mapping designated environment variables
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True
+    )
