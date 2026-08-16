@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
 
-from schemas import GeolocationCoordinates, DestinationMatchResponse
-from services import fetch_realtime_environmental_alerts
-from ai import generate_location_recommendations
+from app.schemas import GeolocationCoordinates, DestinationMatchResponse
+from app.services import fetch_realtime_environmental_alerts
+from app.ai import generate_location_recommendations
 
 
 logging.basicConfig(

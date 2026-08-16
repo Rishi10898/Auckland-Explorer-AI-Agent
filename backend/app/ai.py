@@ -4,9 +4,9 @@ import json
 from google import genai
 from google.genai import types
 
-from schemas import DestinationMatchItem
-from weather import get_auckland_weather
-from places import get_auckland_places
+from app.schemas import DestinationMatchItem
+from app.weather import get_auckland_weather
+from app.places import get_auckland_places
 
 
 # Gemini model used for recommendation reasoning.

@@ -7,12 +7,12 @@ import httpx
 import logging
 from fastapi import HTTPException, status
 from typing import Dict, Any
-from schemas import GeolocationCoordinates
+from app.schemas import GeolocationCoordinates
 
 # Set up system process tracing logging
 logger = logging.getLogger("auckland_explorer.services")
 
-SAFESWIM_API_ENDPOINT = "https://api.safeswim.org.nz/v1/regions/current" 
+SAFESWIM_API_ENDPOINT = "https://safeswim.org.nz/api/locations" 
 
 async def fetch_realtime_environmental_alerts(coords: GeolocationCoordinates) -> str:
     """
