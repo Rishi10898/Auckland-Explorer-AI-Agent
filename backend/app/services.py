@@ -1,6 +1,6 @@
 """
 Auckland Explorer - Asynchronous External Client Services Gateway
-Implements resilient remote integrations utilizing non-blocking design paradigms.
+Implements resilient remote integrations.
 """
 
 import httpx
