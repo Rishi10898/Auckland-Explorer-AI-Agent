@@ -52,3 +52,12 @@ class DestinationMatchResponse(BaseModel):
 
     # Can contain a safety message or be None.
     environmental_safety_notice: Optional[str] = Field(None)
+class ChatRequest(BaseModel):
+    # The user's current location.
+    coordinates: GeolocationCoordinates
+
+    # The message typed into the chat.
+    user_intent_prompt: str
+
+    # Preferences selected before the user starts chatting.
+    user_preferences: dict = {}

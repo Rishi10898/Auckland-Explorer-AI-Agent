@@ -4,10 +4,13 @@ import json
 from google import genai
 from google.genai import types
 
+
 from app.schemas import DestinationMatchItem
 from app.weather import get_auckland_weather
 from app.places import get_auckland_places
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # Gemini model used for recommendation reasoning.
 GEMINI_MODEL = "gemini-2.5-flash-lite"
@@ -59,9 +62,23 @@ async def generate_location_recommendations(
 
     # Do not make recommendations using fake/outdated weather.
     if weather["status"] != "success":
-        raise RuntimeError(
-            "LIVE_WEATHER_UNAVAILABLE"
-        )
+        error_code = weather.get(
+        "error_code",
+        "LIVE_WEATHER_UNAVAILABLE"
+    )
+
+    error_message = weather.get(
+        "message",
+        "Weather service failed."
+    )
+
+    print(
+        f"[WEATHER ERROR] {error_code}: {error_message}"
+    )
+
+    raise RuntimeError(
+        f"LIVE_WEATHER_UNAVAILABLE: {error_code}"
+    )
 
     # ---------------------------------------------------------
     # STEP 2 — READ USER PREFERENCES
