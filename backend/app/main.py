@@ -5,7 +5,7 @@ import logging
 
 from app.schemas import GeolocationCoordinates, DestinationMatchResponse
 from app.schemas import ChatRequest, DestinationMatchResponse
-from app.services import fetch_realtime_environmental_alerts
+from backend.app.beaches import fetch_realtime_environmental_alerts
 from app.ai import generate_location_recommendations
 
 
