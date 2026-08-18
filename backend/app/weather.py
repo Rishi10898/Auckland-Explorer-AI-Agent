@@ -1,14 +1,17 @@
+# Purpose of this file 
+# The purpose of this file is to obtain current weather from OpenWeather and return useful weather information to the rest of the application.
+# imports os and requests modules to handle environment variables and HTTP requests respectively.
 import os
 import requests
 
-
+# declaring a function get_auckland_weather that takes latitude and longitude as input parameters and returns a dictionary containing weather information.
 def get_auckland_weather(lat: float, lon: float) -> dict:
     """
     Gets current weather from OpenWeather
     using the user's actual coordinates.
     """
 
-    # Read the OpenWeather API key from the environment.
+    # Read and/or declareing the OpenWeather API key from the environment variable.
     api_key = os.getenv("OPEN_WEATHER_API_KEY")
 
     # Stop if the API key hasn't been configured.
