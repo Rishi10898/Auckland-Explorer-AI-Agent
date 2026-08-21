@@ -7,6 +7,8 @@ import httpx
 import logging
 from fastapi import HTTPException, status
 from typing import Dict, Any
+
+from scipy import spatial
 from app.schemas import GeolocationCoordinates
 
 # Set up system process tracing logging
@@ -14,13 +16,9 @@ logger = logging.getLogger("auckland_explorer.services")
 
 SAFESWIM_API_ENDPOINT = "https://safeswim.org.nz/api/locations" 
 
+#Fetches live water safety notifications from the Safeswim spatial interface.
 async def fetch_realtime_environmental_alerts(coords: GeolocationCoordinates) -> str:
-    """
-    Fetches live water safety notifications from the Safeswim spatial interface.
-    Demonstrates synthesis of multiple digital info streams to enhance safety metrics (91907).
     
-    Excellence Handling: Provides comprehensive try-except fallback layers handling 429/502 conditions.
-    """
     # Utilizing AsyncClient within a structured context manager prevents socket leakage
     async with httpx.AsyncClient(timeout=4.0) as client:
         try:
