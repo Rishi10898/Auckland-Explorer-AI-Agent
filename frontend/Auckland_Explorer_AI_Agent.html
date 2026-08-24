@@ -73,6 +73,8 @@
     <form id="chatForm" onsubmit="handleFormSubmit(event)" class="flex gap-2 items-center">
       
       <select id="fMode" class="bg-slate-800 text-xs border border-slate-700 text-slate-200 rounded-xl px-2 h-10 focus:outline-none focus:border-blue-500">
+        <option value="bus">🚌 Bus</option>
+        <option value="train">🚂 Train</option>
         <option value="bus">🚌 Bus/Train</option>
         <option value="drive">🚗 Drive</option>
         <option value="cycle">🚴 Cycle</option>
@@ -546,5 +548,6 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 </script>
+<script src="./app.js"></script>
 </body>
 </html>
