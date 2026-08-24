@@ -13,7 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Gemini model used for recommendation reasoning.
-GEMINI_MODEL = "gemini-2.5-flash-lite"
+GEMINI_MODEL_1 = "gemini-2.5-flash-lite"
+GEMINI_MODEL_2 = "gemini-2.5-flash"
+GEMINI_MODEL_3 = "gemini-3.1-flash-lite"
+GEMINI_MODEL_4 = "gemini-3.5-flash-lite"
+GEMINI_MODEL_5 = "gemini-3.5-live-translate"
+GEMINI_MODEL_6 = "gemini-3-flash-live"
 
 
 def get_gemini_client():
@@ -207,7 +212,7 @@ Return JSON in exactly this structure:
 
     # Ask Gemini to process the real data.
     response = client.models.generate_content(
-        model=GEMINI_MODEL,
+        model=GEMINI_MODEL_1,
         contents=prompt,
         config=types.GenerateContentConfig(
             temperature=0.2,
@@ -310,7 +315,7 @@ Return JSON in exactly this structure:
 
         # Ask Gemini to use Google Search to find current information.
         response = client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=GEMINI_MODEL_1,
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.2,
