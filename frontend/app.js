@@ -181,17 +181,18 @@ async function sendChatMessage(userMessage) {
     user_intent_prompt: userMessage,
 
     user_preferences: {
-        categories: ["BEACH"]
+        categories: ["PARK_RECREATION_AREA"],
+        categories: ["BEACHES"]
     }
-    };
+};
         try {
             const response = await fetch("http://localhost:8000/api/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+});
 
             const data = await response.json();
             console.log("HTTP status:", response.status);
