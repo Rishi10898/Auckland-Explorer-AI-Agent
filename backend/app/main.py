@@ -3,8 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
 
-from app.schemas import GeolocationCoordinates, DestinationMatchResponse
-from app.schemas import ChatRequest, DestinationMatchResponse
+from app.schemas import (
+    GeolocationCoordinates,
+    DestinationMatchResponse,
+    ChatRequest
+)
 from app.beaches import fetch_realtime_environmental_alerts
 from app.ai import generate_location_recommendations
 

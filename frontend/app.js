@@ -164,13 +164,17 @@ async function sendChatMessage(userMessage) {
     // Retrieve coordinates (will instantly grab from localStorage if reloaded)
     getUserLocation(async (coords) => {
         const payload = {
-            message: userMessage,
-            user_lat: coords.lat,
-            user_lon: coords.lon,
-            mode: "bus", // or grab from your UI dropdown
-            radius_meters: 10000,
-            stage: "recommend"
-        };
+    coordinates: {
+        latitude: coords.lat,
+        longitude: coords.lon
+    },
+
+    user_intent_prompt: userMessage,
+
+    user_preferences: {
+        categories: ["BEACH"]
+    }
+    };
 
         const response = await fetch("http://localhost:8000/api/chat", {
             method: "POST",
