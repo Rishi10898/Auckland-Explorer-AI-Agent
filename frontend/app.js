@@ -52,8 +52,17 @@ window.addEventListener('DOMContentLoaded', () => {
 explorerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const budget = document.getElementById('input-budget').value || 0.0;
-    const vibe = inputVibe.value;
+    const vibe = inputVibe.value.trim();
+
+    if (!vibe) return;
+     appendMessage(
+        'User',
+        vibe,
+        'bg-blue-600/10 border border-blue-500/20 ml-auto text-right max-w-[85%]'
+     )
+     await sendChatMessage(vibe);
+     inputVibe.value = '';
+    ;
 
     // Append User prompt choice cleanly to the visual chat timeline
     appendMessage('User', vibe, 'bg-blue-600/10 border border-blue-500/20 ml-auto text-right max-w-[85%]');
@@ -175,14 +184,42 @@ async function sendChatMessage(userMessage) {
         categories: ["BEACH"]
     }
     };
+        try {
+            const response = await fetch("http://localhost:8000/api/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
 
-        const response = await fetch("http://localhost:8000/api/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+            const data = await response.json();
 
-        const data = await response.json();
-        console.log("Backend response:", data);
+            console.log("Backend response:", data);
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail?.message || `HTTP ${response.status}`
+                );
+            }
+
+            // Display the backend response
+            data.recommended_destinations.forEach(destination => {
+                appendMessage(
+                    'AI Guide',
+                    `${destination.place_name}: ${destination.relevance_rationale}`,
+                    'bg-slate-900/80 border border-slate-800 max-w-[85%]'
+                );
+            });
+
+        } catch (error) {
+            console.error("Chat request failed:", error);
+
+            appendMessage(
+                'System Error',
+                error.message,
+                'bg-red-950/40 border border-red-800 text-red-400 max-w-[85%]'
+            );
+        }
     });
 }
