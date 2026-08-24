@@ -194,9 +194,11 @@ async function sendChatMessage(userMessage) {
             });
 
             const data = await response.json();
-
+            console.log("HTTP status:", response.status);
             console.log("Backend response:", data);
-
+            if (!response.ok) {
+                throw new Error(JSON.stringify(data));
+            }
             if (!response.ok) {
                 throw new Error(
                     data.detail?.message || `HTTP ${response.status}`
