@@ -1,553 +1,437 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auckland Explorer · Tāmaki Makaurau</title>
-<script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <title>Auckland Explorer · Tāmaki Makaurau</title>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap');
-  body { font-family: 'DM Sans', sans-serif; }
-  .mono { font-family: 'DM Mono', monospace; }
-  .pulse-dot { animation: pulse 1.5s cubic-bezier(.4,0,.6,1) infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-  .spinner { animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  select option { background: #1e293b; color: #e2e8f0; }
-  .fade-in { animation: fadeIn .3s ease-out; }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-  /* Custom scrollbar for horizontal place cards */
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-</style>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIINfQeNHNHm+2fY9GfT4k0zY3x8J5w0k="
+        crossorigin=""
+    />
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin="">
+    </script>
+
+    <style>
+
+        @import url(
+            'https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap'
+        );
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .mono {
+            font-family: 'DM Mono', monospace;
+        }
+
+        .pulse-dot {
+            animation: pulse 1.5s cubic-bezier(.4,0,.6,1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .3;
+            }
+        }
+
+        .spinner {
+            animation: spin .8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        select option {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+
+        .fade-in {
+            animation: fadeIn .3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+    </style>
 </head>
+
+
 <body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden">
 
-<header class="bg-slate-900 border-b border-slate-800 px-5 py-3 flex items-center justify-between shrink-0">
-  <div class="flex items-center gap-2">
-    <span class="text-xl">🌊</span>
-    <span class="font-semibold text-sm tracking-wide">Tāmaki Makaurau Explorer</span>
-  </div>
-  <div class="flex items-center gap-3">
-    <div class="flex items-center gap-1.5">
-      <div id="geoDot" class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></div>
-      <span id="geoLabel" class="mono text-xs text-slate-400">Locating…</span>
-    </div>
-    <button onclick="locateMe()" class="text-[11px] mono text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 transition">
-      📍 Locate Me
-    </button>
-  </div>
-</header>
 
-<main class="flex-1 overflow-hidden max-w-3xl w-full mx-auto p-4 flex flex-col gap-3">
-  
-  <div class="relative w-full h-48 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shrink-0 shadow-lg">
-    <div id="exploreMap" class="w-full h-full z-0"></div>
-    <div id="locateResult" class="absolute bottom-2 left-2 z-10 bg-slate-950/80 backdrop-blur border border-slate-800 rounded-lg p-2 text-xs font-mono text-slate-300 hidden max-w-[90%]"></div>
-  </div>
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
 
-  <div id="chatThread" class="flex-1 overflow-y-auto space-y-4 pr-1 pb-4">
-    
-    <div class="flex items-start gap-3 fade-in">
-      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-sm leading-relaxed text-slate-200">
-        Kia ora! I am your interactive AI guide for Tāmaki Makaurau (Auckland). Tell me what kind of vibe, coastal walk, or swim spot you're looking for!
-      </div>
-    </div>
+    <header
+        class="bg-slate-900 border-b border-slate-800 px-5 py-3
+               flex items-center justify-between shrink-0"
+    >
 
-  </div>
+        <div class="flex items-center gap-2">
 
-  <div class="shrink-0 bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-xl">
-    
-    <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar mb-2 pb-1 text-xs">
-      <button onclick="quickSend('Piha Beach swim & surf')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🏖 Piha Beach</button>
-      <button onclick="quickSend('Mission Bay family swim')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🌴 Mission Bay</button>
-      <button onclick="quickSend('Western Springs peaceful park walk')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🌿 Western Springs</button>
-      <button onclick="quickSend('Quiet coastal walk with sea views')" class="bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full whitespace-nowrap transition">🚶 Coastal Walk</button>
-    </div>
+            <span class="text-xl">
+                🌊
+            </span>
 
-    <form id="chatForm" onsubmit="handleFormSubmit(event)" class="flex gap-2 items-center">
-      
-      <select id="fMode" class="bg-slate-800 text-xs border border-slate-700 text-slate-200 rounded-xl px-2 h-10 focus:outline-none focus:border-blue-500">
-        <option value="bus">🚌 Bus</option>
-        <option value="train">🚂 Train</option>
-        <option value="bus">🚌 Bus/Train</option>
-        <option value="drive">🚗 Drive</option>
-        <option value="cycle">🚴 Cycle</option>
-        <option value="walk">🚶 Walk</option>
-      </select>
+            <span class="font-semibold text-sm tracking-wide">
+                Tāmaki Makaurau Explorer
+            </span>
 
-      <select id="fRadius" class="bg-slate-800 text-xs border border-slate-700 text-slate-200 rounded-xl px-2 h-10 focus:outline-none focus:border-blue-500">
-        <option value="5000">5 km</option>
-        <option value="10000" selected>10 km</option>
-        <option value="25000">25 km</option>
-        <option value="50000">50 km</option>
-        <option value="100000">100 km</option>
-        <option value="1300000">130 km</option>
-      </select>
+        </div>
 
-      <input 
-        type="text" 
-        id="fInput" 
-        placeholder="Describe a vibe or destination in Auckland..." 
-        class="flex-1 bg-slate-800 text-sm border border-slate-700 rounded-xl px-3.5 h-10 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
-        required
-      />
 
-      <button type="submit" id="sendBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm px-4 h-10 rounded-xl transition flex items-center justify-center shrink-0">
-        Send →
-      </button>
-    </form>
-  </div>
+        <div class="flex items-center gap-3">
 
-</main>
+            <div class="flex items-center gap-1.5">
 
-<script>
-const API_URL = 'http://127.0.0.1:8000/api/chat';
-let cachedUserLat = -36.8485;
-let cachedUserLon = 174.7633;
-let cachedSuburb = "Central Auckland";
+                <div
+                    id="geoDot"
+                    class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"
+                ></div>
 
-// Scope variables for map instance and current marker
-let exploreMapInstance = null;
-let userLocationMarker = null;
+                <span
+                    id="geoLabel"
+                    class="mono text-xs text-slate-400"
+                >
+                    Locating…
+                </span>
 
-// ── 1. MAP AND GEOLOCATION INTEGRATION ──
-
-/**
- * Initiates precise geolocation lookup using HTML5 Geolocation API
- */
-function locateMe() {
-  const resultDiv = document.getElementById('locateResult');
-  
-  // Clear previous output state
-  if (resultDiv) {
-    resultDiv.classList.remove('hidden');
-    resultDiv.innerHTML = "⌛ Attempting to locate your position…";
-  }
-
-  // Check browser hardware/API support
-  if (!navigator.geolocation) {
-    if (resultDiv) resultDiv.innerHTML = "❌ Geolocation is not supported by your browser.";
-    setGeoStatus('error', 'GPS Unsupported');
-    return;
-  }
-
-  setGeoStatus('loading', 'Locating Precise Position…');
-
-  // Geolocation Options optimized for precise accuracy
-  const geoOptions = {
-    enableHighAccuracy: true, // Forces GPS over IP-based lookup if available
-    timeout: 10000,           // 10-second timeout
-    maximumAge: 0             // Do not use cached location data
-  };
-
-  // Request Position
-  navigator.geolocation.getCurrentPosition(
-    onLocationSuccess, 
-    onLocationError, 
-    geoOptions
-  );
-}
-
-/**
- * Success callback for Geolocation API
- * @param {GeolocationPosition} position 
- */
-async function onLocationSuccess(position) {
-  const lat = position.coords.latitude;
-  const lon = position.coords.longitude;
-  const accuracy = Math.round(position.coords.accuracy); // Accuracy radius in metres
-
-  cachedUserLat = lat;
-  cachedUserLon = lon;
-  cachedSuburb = await fetchSuburbName(lat, lon);
-
-  localStorage.setItem('tm_user_lat', cachedUserLat);
-  localStorage.setItem('tm_user_lon', cachedUserLon);
-  localStorage.setItem('tm_suburb', cachedSuburb);
-
-  const resultDiv = document.getElementById('locateResult');
-  if (resultDiv) {
-    resultDiv.innerHTML = `
-      <strong>📍 Location Pinpointed</strong><br>
-      Latitude: ${lat.toFixed(5)}° | Longitude: ${lon.toFixed(5)}°<br>
-      <small style="color:var(--ink-soft, #94a3b8);">Accuracy: ±${accuracy} metres</small>
-    `;
-  }
-
-  setGeoStatus('active', `Position: ${cachedSuburb}`);
-
-  // Render or update the map position
-  renderUserMap(lat, lon, accuracy);
-}
-
-/**
- * Error callback for Geolocation API
- * @param {GeolocationPositionError} error 
- */
-function onLocationError(error) {
-  const resultDiv = document.getElementById('locateResult');
-  let msg = "";
-
-  switch(error.code) {
-    case error.PERMISSION_DENIED:
-      msg = "⚠️ Location access was denied by user/browser permissions.";
-      break;
-    case error.POSITION_UNAVAILABLE:
-      msg = "⚠️ Location information is unavailable.";
-      break;
-    case error.TIMEOUT:
-      msg = "⚠️ Request to obtain location timed out.";
-      break;
-    default:
-      msg = "⚠️ An unknown geolocation error occurred.";
-      break;
-  }
-
-  if (resultDiv) resultDiv.innerHTML = msg;
-  
-  // Fallback state
-  cachedUserLat = -36.8485;
-  cachedUserLon = 174.7633;
-  cachedSuburb = "Central Auckland";
-  setGeoStatus('error', `Position: ${cachedSuburb}`);
-}
-
-/**
- * Initializes/Updates Leaflet map to focus on precise coordinates
- * @param {number} lat - Latitude
- * @param {number} lon - Longitude
- * @param {number} accuracy - Accuracy in metres
- */
-function renderUserMap(lat, lon, accuracy) {
-  const mapElement = document.getElementById('exploreMap');
-  if (!mapElement) return;
-
-  // 1. Initialize Map Instance if it doesn't exist
-  if (!exploreMapInstance) {
-    exploreMapInstance = L.map('exploreMap').setView([lat, lon], 14);
-
-    // OpenStreetMap Tile Layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(exploreMapInstance);
-  } else {
-    // Re-center existing map instance dynamically
-    exploreMapInstance.setView([lat, lon], 14);
-  }
-
-  // 2. Clear existing markers/layers to avoid duplicate overlays
-  if (userLocationMarker) {
-    exploreMapInstance.removeLayer(userLocationMarker);
-  }
-
-  // 3. Create a feature group to combine accuracy circle and position marker
-  const markerGroup = L.featureGroup();
-
-  // Draw an accuracy circle around coordinates
-  const accuracyCircle = L.circle([lat, lon], {
-    radius: accuracy,
-    color: '#1F6F6F',
-    fillColor: '#1F6F6F',
-    fillOpacity: 0.15,
-    weight: 1
-  });
-
-  // Custom visual marker for the explicit user location
-  const locationMarker = L.marker([lat, lon])
-    .bindPopup(`<b>Your Precise Location</b><br>Accuracy: ±${accuracy}m`)
-    .openPopup();
-
-  markerGroup.addLayer(accuracyCircle);
-  markerGroup.addLayer(locationMarker);
-  
-  // Add to map and adjust bounds to contain accuracy radius perfectly
-  markerGroup.addTo(exploreMapInstance);
-  exploreMapInstance.fitBounds(markerGroup.getBounds(), { padding: [30, 30] });
-
-  // Retain reference for cleanup on subsequent calls
-  userLocationMarker = markerGroup;
-
-  // 4. Force Leaflet view refresh (handles container resize/rendering quirks)
-  setTimeout(() => {
-    exploreMapInstance.invalidateSize();
-  }, 200);
-}
-
-// ── 2. PRECISE LOCATION LOGIC & REVERSE GEOCODING ──
-async function fetchSuburbName(lat, lon) {
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18`);
-    if (res.ok) {
-      const data = await res.json();
-      const addr = data.address || {};
-      return addr.neighbourhood || addr.suburb || addr.residential || addr.village || addr.town || addr.city || "Tāmaki Makaurau";
-    }
-  } catch (err) {
-    console.warn("Reverse geocode failed:", err);
-  }
-  return "Tāmaki Makaurau";
-}
-
-async function acquirePreciseLocation(forceRefresh = false) {
-  const savedLat = localStorage.getItem('tm_user_lat');
-  const savedLon = localStorage.getItem('tm_user_lon');
-  const savedSuburb = localStorage.getItem('tm_suburb');
-
-  if (!forceRefresh && savedLat && savedLon && savedSuburb) {
-    cachedUserLat = parseFloat(savedLat);
-    cachedUserLon = parseFloat(savedLon);
-    cachedSuburb = savedSuburb;
-    setGeoStatus('active', `Position: ${cachedSuburb}`);
-    renderUserMap(cachedUserLat, cachedUserLon, 50);
-    return;
-  }
-
-  locateMe();
-}
-
-function setGeoStatus(type, label) {
-  const dot = document.getElementById('geoDot');
-  const txt = document.getElementById('geoLabel');
-  if (!dot || !txt) return;
-
-  dot.className = 'w-2 h-2 rounded-full';
-
-  if (type === 'active') {
-    dot.classList.add('bg-emerald-400');
-  } else if (type === 'loading') {
-    dot.classList.add('bg-amber-400', 'pulse-dot');
-  } else {
-    dot.classList.add('bg-rose-400');
-  }
-  txt.textContent = label;
-}
-
-function resetUserLocation() {
-  localStorage.removeItem('tm_user_lat');
-  localStorage.removeItem('tm_user_lon');
-  localStorage.removeItem('tm_suburb');
-  
-  const resultDiv = document.getElementById('locateResult');
-  if (resultDiv) resultDiv.classList.add('hidden');
-  
-  acquirePreciseLocation(true);
-}
-
-// Initialize location on startup
-acquirePreciseLocation();
-
-// ── 3. CHAT RENDERING ENGINE ──
-function appendUserMessage(text) {
-  const thread = document.getElementById('chatThread');
-  const html = `
-    <div class="flex items-start gap-3 justify-end fade-in">
-      <div class="bg-blue-600 rounded-2xl rounded-tr-none p-3.5 max-w-[85%] text-sm text-slate-100 shadow-md">
-        ${escapeHtml(text)}
-      </div>
-      <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold shrink-0">You</div>
-    </div>
-  `;
-  thread.insertAdjacentHTML('beforeend', html);
-  scrollToBottom();
-}
-
-function appendAIMessage(data, isConfirmationStage = false) {
-  const thread = document.getElementById('chatThread');
-  const places = data.recommended_places || [];
-  const transit = data.transit_options || [];
-  const safeswim = data.safeswim_report || {};
-
-  // Build Carousel Cards
-  let cardsHtml = '';
-  if (places.length > 0) {
-    cardsHtml = `
-      <div class="flex overflow-x-auto gap-3 py-2 my-2 no-scrollbar">
-        ${places.map(p => `
-          <div class="min-w-[260px] max-w-[280px] bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-col justify-between shrink-0 shadow-lg">
-            <div>
-              <div class="flex justify-between items-start mb-1">
-                <h3 class="font-bold text-blue-400 text-sm">${escapeHtml(p.name)}</h3>
-                <span class="text-[10px] mono bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">${escapeHtml(p.suburb || 'Auckland')}</span>
-              </div>
-              
-              <p class="text-xs text-slate-300 mt-2 leading-relaxed line-clamp-2">
-                <strong class="text-blue-300">History:</strong> ${escapeHtml(p.cultural_significance || 'Historical landmark in Tāmaki Makaurau.')}
-              </p>
-              
-              <div class="flex flex-wrap gap-1 mt-2.5">
-                ${(p.amenities || []).map(a => `<span class="text-[10px] bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">✓ ${escapeHtml(a)}</span>`).join('')}
-              </div>
             </div>
 
-            <div class="mt-3 pt-2 border-t border-slate-900 flex flex-col gap-2">
-              ${p.auckland_council_url ? `
-                <a href="${p.auckland_council_url}" target="_blank" rel="noopener noreferrer" class="text-[11px] text-center text-blue-400 hover:underline">
-                  🌐 Auckland Council Info
-                </a>
-              ` : ''}
 
-              ${!isConfirmationStage ? `
-                <button onclick="confirmDestination('${escapeHtml(p.name)}', ${p.latitude}, ${p.longitude})" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded-lg transition">
-                  Lock in Spot & View Routes 🚌
+            <button
+                type="button"
+                onclick="locateMe(true)"
+                class="text-[11px] mono text-slate-400
+                       hover:text-slate-200 bg-slate-800
+                       hover:bg-slate-700 px-2 py-1 rounded
+                       border border-slate-700 transition"
+            >
+                📍 Locate Me
+            </button>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         MAIN APPLICATION
+    ====================================================== -->
+
+    <main
+        class="flex-1 overflow-hidden max-w-3xl w-full
+               mx-auto p-4 flex flex-col gap-3"
+    >
+
+
+        <!-- =================================================
+             MAP
+        ================================================== -->
+
+        <div
+            class="relative w-full h-48 bg-slate-900
+                   border border-slate-800 rounded-2xl
+                   overflow-hidden shrink-0 shadow-lg"
+        >
+
+            <div
+                id="exploreMap"
+                class="w-full h-full z-0"
+            ></div>
+
+            <div
+                id="locateResult"
+                class="absolute bottom-2 left-2 z-10
+                       bg-slate-950/80 backdrop-blur
+                       border border-slate-800 rounded-lg
+                       p-2 text-xs font-mono
+                       text-slate-300 hidden max-w-[90%]"
+            ></div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             CHAT
+        ================================================== -->
+
+        <div
+            id="chatThread"
+            class="flex-1 overflow-y-auto
+                   space-y-4 pr-1 pb-4"
+        >
+
+            <div
+                class="flex items-start gap-3 fade-in"
+            >
+
+                <div
+                    class="w-8 h-8 rounded-full bg-blue-600
+                           flex items-center justify-center
+                           text-xs font-bold shrink-0"
+                >
+                    AI
+                </div>
+
+                <div
+                    class="bg-slate-900 border border-slate-800
+                           rounded-2xl rounded-tl-none
+                           p-4 max-w-[85%] text-sm
+                           leading-relaxed text-slate-200"
+                >
+
+                    Kia ora! I am your interactive AI guide
+                    for Tāmaki Makaurau (Auckland).
+
+                    Tell me what kind of place, activity,
+                    or vibe you're looking for.
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             CHAT CONTROLS
+        ================================================== -->
+
+        <div
+            class="shrink-0 bg-slate-900 p-3
+                   rounded-2xl border border-slate-800
+                   shadow-xl"
+        >
+
+
+            <!-- QUICK PROMPTS -->
+
+            <div
+                class="flex items-center gap-1.5
+                       overflow-x-auto no-scrollbar
+                       mb-2 pb-1 text-xs"
+            >
+
+                <button
+                    type="button"
+                    onclick="quickSend('Piha Beach swim and surf')"
+                    class="bg-slate-800/80 hover:bg-slate-700
+                           text-slate-300 border border-slate-700
+                           px-2.5 py-1 rounded-full
+                           whitespace-nowrap transition"
+                >
+                    🏖 Piha Beach
                 </button>
-              ` : ''}
+
+
+                <button
+                    type="button"
+                    onclick="quickSend('Mission Bay family swim')"
+                    class="bg-slate-800/80 hover:bg-slate-700
+                           text-slate-300 border border-slate-700
+                           px-2.5 py-1 rounded-full
+                           whitespace-nowrap transition"
+                >
+                    🌴 Mission Bay
+                </button>
+
+
+                <button
+                    type="button"
+                    onclick="quickSend('Western Springs peaceful park walk')"
+                    class="bg-slate-800/80 hover:bg-slate-700
+                           text-slate-300 border border-slate-700
+                           px-2.5 py-1 rounded-full
+                           whitespace-nowrap transition"
+                >
+                    🌿 Western Springs
+                </button>
+
+
+                <button
+                    type="button"
+                    onclick="quickSend('Quiet coastal walk with sea views')"
+                    class="bg-slate-800/80 hover:bg-slate-700
+                           text-slate-300 border border-slate-700
+                           px-2.5 py-1 rounded-full
+                           whitespace-nowrap transition"
+                >
+                    🚶 Coastal Walk
+                </button>
+
             </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
 
-  // Build Safeswim Badge
-  let safeswimHtml = '';
-  if (safeswim.water_quality && safeswim.water_quality !== 'UNKNOWN') {
-    const isSafe = safeswim.water_quality.toLowerCase().includes('green') || safeswim.water_quality.toLowerCase().includes('safe');
-    safeswimHtml = `
-      <div class="mt-2 p-2 rounded-lg text-xs flex items-center gap-2 border ${isSafe ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300' : 'bg-amber-950/40 border-amber-800/60 text-amber-300'}">
-        <span>🏊 Water Quality (Safeswim): <strong>${escapeHtml(safeswim.water_quality)}</strong></span>
-        ${safeswim.patrolled ? '<span class="ml-auto font-mono text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded">Patrolled</span>' : ''}
-      </div>
-    `;
-  }
 
-  // Build Transit Options Block
-  let transitHtml = '';
-  if (data.show_transit_links && transit.length > 0) {
-    transitHtml = `
-      <div class="mt-3 bg-slate-950 border border-blue-500/30 p-3 rounded-xl">
-        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">🚍 Available Transit Options</h4>
-        ${transit.map(t => `
-          <div class="text-xs text-slate-300 py-1 flex justify-between border-b border-slate-900 last:border-0">
-            <span>${escapeHtml(t.service_line || 'Route')} (${escapeHtml(t.estimated_travel_time || 'N/A')})</span>
-            <span class="font-mono text-blue-400">${escapeHtml(t.fare_estimate || 'Standard AT Fare')}</span>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
 
-  const aiHtml = `
-    <div class="flex items-start gap-3 fade-in">
-      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-4 max-w-[85%] text-sm leading-relaxed text-slate-200">
-        <p>${escapeHtml(data.chat_response || 'Here are the best options found for your search.')}</p>
-        ${cardsHtml}
-        ${safeswimHtml}
-        ${transitHtml}
-        ${data.follow_up_question ? `<p class="text-xs text-blue-400 font-medium mt-2">${escapeHtml(data.follow_up_question)}</p>` : ''}
-      </div>
-    </div>
-  `;
+            <!-- OPTIONS -->
 
-  thread.insertAdjacentHTML('beforeend', aiHtml);
-  scrollToBottom();
-}
+            <div class="flex gap-2 mb-2">
 
-function appendLoadingMessage() {
-  const thread = document.getElementById('chatThread');
-  const id = 'loading-' + Date.now();
-  const html = `
-    <div id="${id}" class="flex items-start gap-3 fade-in">
-      <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">AI</div>
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-none p-3.5 flex items-center gap-2 text-xs text-slate-400">
-        <div class="spinner w-4 h-4 border-2 border-slate-700 border-t-blue-400 rounded-full"></div>
-        Evaluating options in Tāmaki Makaurau…
-      </div>
-    </div>
-  `;
-  thread.insertAdjacentHTML('beforeend', html);
-  scrollToBottom();
-  return id;
-}
 
-function removeLoadingMessage(id) {
-  const el = document.getElementById(id);
-  if (el) el.remove();
-}
+                <!-- TRANSPORT -->
 
-// ── 4. API COMMUNICATION HANDLERS ──
-function quickSend(promptText) {
-  document.getElementById('fInput').value = promptText;
-  handleFormSubmit(new Event('submit'));
-}
+                <select
+                    id="fMode"
+                    class="flex-1 bg-slate-800
+                           text-xs border border-slate-700
+                           text-slate-200 rounded-xl px-2
+                           h-10 focus:outline-none
+                           focus:border-blue-500"
+                >
 
-function handleFormSubmit(e) {
-  e.preventDefault();
-  const input = document.getElementById('fInput');
-  const message = input.value.trim();
-  if (!message) return;
+                    <option value="public_transport">
+                        🚌 Public Transport
+                    </option>
 
-  appendUserMessage(message);
-  input.value = '';
+                    <option value="drive">
+                        🚗 Drive
+                    </option>
 
-  sendChatRequest(message, "recommend");
-}
+                    <option value="cycle">
+                        🚴 Cycle
+                    </option>
 
-function confirmDestination(placeName, lat, lon) {
-  appendUserMessage(`Yes, let's lock in ${placeName}!`);
-  sendChatRequest(`Confirm destination: ${placeName}`, "confirm", lat, lon);
-}
+                    <option value="walk">
+                        🚶 Walk
+                    </option>
 
-async function sendChatRequest(message, stage = "recommend", destLat = null, destLon = null) {
-  const loadingId = appendLoadingMessage();
-  const mode = document.getElementById('fMode').value;
-  const radius = parseInt(document.getElementById('fRadius').value);
+                </select>
 
-  const payload = {
-    message: message,
-    user_lat: destLat || cachedUserLat || -36.8485,
-    user_lon: destLon || cachedUserLon || 174.7633,
-    mode: mode,
-    radius_meters: radius,
-    stage: stage
-  };
 
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
 
-    removeLoadingMessage(loadingId);
+                <!-- RADIUS -->
 
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const data = await res.json();
+                <select
+                    id="fRadius"
+                    class="flex-1 bg-slate-800
+                           text-xs border border-slate-700
+                           text-slate-200 rounded-xl px-2
+                           h-10 focus:outline-none
+                           focus:border-blue-500"
+                >
 
-    appendAIMessage(data, stage === "confirm");
+                    <option value="2000">
+                        2 km
+                    </option>
 
-  } catch (err) {
-    removeLoadingMessage(loadingId);
-    console.error("Chat error:", err);
-    appendAIMessage({
-      chat_response: "Kia ora! I had trouble connecting to the decision engine. Please make sure the FastAPI server is running.",
-      follow_up_question: "Would you like to try sending your request again?"
-    });
-  }
-}
+                    <option value="5000">
+                        5 km
+                    </option>
 
-// ── UTILITIES ──
-function scrollToBottom() {
-  const thread = document.getElementById('chatThread');
-  thread.scrollTop = thread.scrollHeight;
-}
+                    <option value="10000" selected>
+                        10 km
+                    </option>
 
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-</script>
+                    <option value="25000">
+                        25 km
+                    </option>
+
+                    <option value="50000">
+                        50 km
+                    </option>
+
+                    <option value="100000">
+                        100 km
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- CHAT FORM -->
+
+            <form
+                id="chatForm"
+                class="flex gap-2 items-center"
+            >
+
+                <input
+                    type="text"
+                    id="fInput"
+                    placeholder="What are you looking for in Auckland?"
+                    class="flex-1 bg-slate-800
+                           text-sm border border-slate-700
+                           rounded-xl px-3.5 h-10
+                           text-slate-100
+                           placeholder-slate-500
+                           focus:outline-none
+                           focus:border-blue-500"
+                    required
+                >
+
+
+                <button
+                    type="submit"
+                    id="sendBtn"
+                    class="bg-blue-600 hover:bg-blue-500
+                           text-white font-medium
+                           text-sm px-4 h-10 rounded-xl
+                           transition flex items-center
+                           justify-center shrink-0"
+                >
+                    Send →
+                </button>
+
+            </form>
+
+        </div>
+
+    </main>
+
+
+    <!-- =====================================================
+         IMPORTANT:
+         ALL APPLICATION JAVASCRIPT IS IN app.js
+    ====================================================== -->
 <script src="./app.js"></script>
+
 </body>
+
 </html>
