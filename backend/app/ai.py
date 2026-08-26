@@ -4,14 +4,18 @@ import json
 from google import genai
 from google.genai import types
 
+
 from app.schemas import DestinationMatchItem
 from app.weather import get_auckland_weather
 from app.places import get_auckland_places
+from dotenv import load_dotenv
 
+from app import weather
+
+load_dotenv()
 
 # Gemini model used for recommendation reasoning.
-GEMINI_MODEL = "gemini-2.5-flash-lite"
-
+GEMINI_MODEL = "gemini-3.5-flash"
 
 def get_gemini_client():
     """
@@ -51,18 +55,30 @@ async def generate_location_recommendations(
     # ---------------------------------------------------------
     # STEP 1 — GET LIVE WEATHER
     # ---------------------------------------------------------
-
     weather = get_auckland_weather(
-        lat=lat,
-        lon=lon
-    )
+    lat=lat,
+    lon=lon
+)
 
-    # Do not make recommendations using fake/outdated weather.
     if weather["status"] != "success":
-        raise RuntimeError(
+
+        error_code = weather.get(
+            "error_code",
             "LIVE_WEATHER_UNAVAILABLE"
         )
 
+        error_message = weather.get(
+            "message",
+            "Weather service failed."
+        )
+
+        print(
+            f"[WEATHER ERROR] {error_code}: {error_message}"
+        )
+
+        raise RuntimeError(
+            f"LIVE_WEATHER_UNAVAILABLE: {error_code}"
+        )
     # ---------------------------------------------------------
     # STEP 2 — READ USER PREFERENCES
     # ---------------------------------------------------------
@@ -190,14 +206,18 @@ Return JSON in exactly this structure:
 
     # Ask Gemini to process the real data.
     response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.2,
-            response_mime_type="application/json"
-        )
+    model=GEMINI_MODEL,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        temperature=0.2,
+        tools=[
+            types.Tool(
+                google_search=types.GoogleSearch()
+            )
+        ],
+        response_mime_type="application/json"
     )
-
+)
     # Gemini's response.text can be either a string or None.
     response_text = response.text
 

@@ -1,15 +1,14 @@
+# Purpose of this file 
+# The purpose of this file is to obtain current weather from OpenWeather and return useful weather information to the rest of the application.
+# imports os and requests modules to handle environment variables and HTTP requests respectively.
 import os
 import requests
 
-
+# Declaring a function get_auckland_weather that takes latitude and longitude as input parameters and returns a dictionary containing weather information.
+# It is set to return a dictionary with string keys and values of any type because it makes it easy for the AI model to process.
 def get_auckland_weather(lat: float, lon: float) -> dict:
-    """
-    Gets current weather from OpenWeather
-    using the user's actual coordinates.
-    """
-
-    # Read the OpenWeather API key from the environment.
-    api_key = os.getenv("OPEN_WEATHER_API_KEY")
+    # Read and/or declareing the OpenWeather API key from the environment variable.
+    api_key = os.getenv("OPEN_WEATHER_API_KEY") # In this way we can keep the API key secure and not hardcode it into the codebase.
 
     # Stop if the API key hasn't been configured.
     if not api_key:
@@ -17,7 +16,7 @@ def get_auckland_weather(lat: float, lon: float) -> dict:
             "status": "error",
             "error_code": "WEATHER_API_KEY_MISSING",
             "message": "Weather API key is not configured."
-        }
+        } # Showing an error message if the API key is missing, which helps in debugging and ensures that the application doesn't proceed with an invalid state.
 
     # Build the OpenWeather current-weather API request.
     url = (
@@ -30,7 +29,7 @@ def get_auckland_weather(lat: float, lon: float) -> dict:
 
     try:
         # Send the request to OpenWeather.
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=5) # Setting a timeout of 5 seconds to avoid hanging indefinitely if the API is unresponsive.
 
         # Raise an exception for HTTP errors.
         response.raise_for_status()
@@ -50,7 +49,7 @@ def get_auckland_weather(lat: float, lon: float) -> dict:
         }
 
     except requests.RequestException as exc:
-        # Do NOT invent weather when OpenWeather fails.
+        # Doesn't invent weather when OpenWeather fails.
         return {
             "status": "error",
             "error_code": "WEATHER_API_UNAVAILABLE",
