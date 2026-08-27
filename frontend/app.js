@@ -964,5 +964,131 @@ function escapeHtml(
             /'/g,
             "&#039;"
         );
+}
+function addHtmlMessage(sender, html) {
 
+    const div = document.createElement("div");
+
+    div.className =
+        "flex items-start gap-3 fade-in";
+
+    div.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-blue-600
+                    flex items-center justify-center
+                    text-xs font-bold shrink-0">
+            AI
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800
+                    rounded-2xl rounded-tl-none p-4
+                    max-w-[90%] text-sm leading-relaxed
+                    text-slate-200">
+
+            ${html}
+
+        </div>
+    `;
+
+    chatThread.appendChild(div);
+
+    scrollToBottom();
+}
+function displayAIResponse(data) {
+
+    const places = data.recommended_destinations || [];
+    const transport = data.transport;
+
+    let html = `
+        <div class="font-semibold mb-2">
+            AI Guide
+        </div>
+
+        <p class="mb-4">
+            ${escapeHtml(data.cultural_greeting || "")}
+        </p>
+
+        <p class="mb-4">
+            ${escapeHtml(data.summary || "")}
+        </p>
+    `;
+
+    places.forEach((p, i) => {
+        html += `
+            <div class="mb-4 pb-3 border-b border-slate-800">
+                <div class="font-semibold text-white">
+                    ${i + 1}. ${escapeHtml(p.place_name)}
+                </div>
+
+                <div class="text-xs text-blue-400 mt-1">
+                    ${escapeHtml(p.category)}
+                </div>
+
+                <p class="mt-2">
+                    ${escapeHtml(p.relevance_rationale)}
+                </p>
+
+                <a
+                    href="${escapeHtml(p.auckland_council_url)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-blue-400 underline text-xs"
+                >
+                    Official destination information
+                </a>
+            </div>
+        `;
+    });
+
+    if (transport) {
+        html += `
+            <div class="mt-4">
+                <div class="font-semibold text-white">
+                    🚍 Transport
+                </div>
+
+                <p class="mt-2">
+                    Mode: ${escapeHtml(transport.mode || "Public transport")}
+                </p>
+
+                <p>
+                    Status: ${escapeHtml(transport.status || "Unavailable")}
+                </p>
+
+                <p>
+                    Fare: ${escapeHtml(transport.fare || "Check AT")}
+                </p>
+
+                ${
+                    transport.journey_planner_url
+                    ? `
+                    <a
+                        href="${escapeHtml(transport.journey_planner_url)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-block mt-2 text-blue-400 underline"
+                    >
+                        Plan this journey with AT
+                    </a>
+                    `
+                    : ""
+                }
+            </div>
+        `;
+    }
+
+    if (data.environmental_safety_notice) {
+        html += `
+            <div class="mt-4 pt-3 border-t border-slate-800">
+                <div class="font-semibold text-white">
+                    🌊 Safety
+                </div>
+
+                <p class="mt-1">
+                    ${escapeHtml(data.environmental_safety_notice)}
+                </p>
+            </div>
+        `;
+    }
+
+    addHtmlMessage("AI Guide", html);
 }
