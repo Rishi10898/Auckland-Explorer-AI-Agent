@@ -59,7 +59,9 @@ async def generate_regional_destination_matches(
 
         return DestinationMatchResponse(
             cultural_greeting="Tēnā koe! Welcome to beautiful Tāmaki Makaurau (Auckland).",
-            recommended_destinations=processed_destinations,
+            summary=processed_destinations["summary"],
+            recommended_destinations=processed_destinations["recommendations"],
+            transport=processed_destinations["transport"],
             environmental_safety_notice=environmental_alert
         )
 

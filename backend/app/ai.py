@@ -1,39 +1,30 @@
 import os
 import json
-
-from google import genai
-from google.genai import types
-
+import logging
+from dotenv import load_dotenv
+from openai import OpenAI
 
 from app.schemas import DestinationMatchItem
 from app.weather import get_auckland_weather
 from app.places import get_auckland_places
-from dotenv import load_dotenv
+from app.transport import get_transport_info
 
-from app import weather
 
 load_dotenv()
 
-# Gemini model used for recommendation reasoning.
-GEMINI_MODEL = "gemini-3.5-flash"
+logger = logging.getLogger("auckland_explorer.ai")
 
-def get_gemini_client():
-    """
-    Creates a Gemini client using the API key
-    stored in the environment.
-    """
+NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash-0731"
+NVIDIA_URL = "https://integrate.api.nvidia.com/v1"
 
-    # Read the Gemini API key from the environment.
-    api_key = os.getenv("GEMINI_API_KEY")
 
-    # Stop if the API key has not been configured.
-    if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured."
-        )
+def get_nvidia_client():
+    key = os.getenv("NVIDIA_API_KEY")
 
-    # Create and return the Gemini client.
-    return genai.Client(api_key=api_key)
+    if not key:
+        raise RuntimeError("NVIDIA_API_KEY is not configured.")
+
+    return OpenAI(base_url=NVIDIA_URL, api_key=key)
 
 
 async def generate_location_recommendations(
@@ -41,321 +32,180 @@ async def generate_location_recommendations(
     lat: float,
     lon: float,
     user_preferences: dict
-) -> list[DestinationMatchItem]:
-    """
-    Main recommendation pipeline.
+):
 
-    1. Gets live weather.
-    2. Attempts to get live places from TomTom.
-    3. If TomTom works, Gemini ranks those real places.
-    4. If TomTom fails, Gemini uses Google Search to find real places.
-    5. Never intentionally invents a destination.
-    """
+    weather = get_auckland_weather(lat=lat, lon=lon)
 
-    # ---------------------------------------------------------
-    # STEP 1 — GET LIVE WEATHER
-    # ---------------------------------------------------------
-    weather = get_auckland_weather(
-    lat=lat,
-    lon=lon
-)
-
-    if weather["status"] != "success":
-
-        error_code = weather.get(
-            "error_code",
+    if weather.get("status") != "success":
+        raise RuntimeError(
             "LIVE_WEATHER_UNAVAILABLE"
         )
 
-        error_message = weather.get(
-            "message",
-            "Weather service failed."
-        )
-
-        print(
-            f"[WEATHER ERROR] {error_code}: {error_message}"
-        )
-
-        raise RuntimeError(
-            f"LIVE_WEATHER_UNAVAILABLE: {error_code}"
-        )
-    # ---------------------------------------------------------
-    # STEP 2 — READ USER PREFERENCES
-    # ---------------------------------------------------------
-
-    # Preferences come from the frontend.
-    #
-    # Example:
-    #
-    # {
-    #     "categories": ["BEACH", "PARK"],
-    #     "budget": 30,
-    #     "transport": "public_transport"
-    # }
-
-    preferred_categories = user_preferences.get(
+    categories = user_preferences.get(
         "categories",
-        []
+        ["BEACH", "PARK_RECREATION_AREA"]
     )
 
-    # ---------------------------------------------------------
-    # STEP 3 — TRY TOMTOM
-    # ---------------------------------------------------------
+    places = []
 
-    tomtom_places = []
-
-    # Search TomTom for each category selected by the user.
-    for category in preferred_categories:
-
+    for category in categories:
         result = get_auckland_places(
             target_category=category,
             lat=lat,
-            lon=lon
+            lon=lon,
+            radius_meters=user_preferences.get(
+                "radius_meters",
+                10000
+            )
         )
 
-        # Only use places when TomTom successfully returned data.
-        if result["status"] == "success":
-            tomtom_places.extend(
-                result.get("places", [])
-            )
+        if result.get("status") == "success":
+            places.extend(result.get("places", []))
 
-    # ---------------------------------------------------------
-    # STEP 4 — TOMTOM SUCCESS
-    # ---------------------------------------------------------
-
-    if tomtom_places:
-
-        # Gemini chooses the best places from the
-        # real places returned by TomTom.
-        return await ask_gemini_to_rank_places(
-            user_prompt=user_prompt,
-            user_preferences=user_preferences,
-            weather=weather,
-            places=tomtom_places
-        )
-
-    # ---------------------------------------------------------
-    # STEP 5 — TOMTOM FAILED
-    # ---------------------------------------------------------
-
-    # No places were obtained from TomTom.
-    # Use Gemini's Google Search grounding as the fallback.
-    return await ask_gemini_to_search_places(
-        user_prompt=user_prompt,
-        user_preferences=user_preferences,
-        weather=weather,
-        lat=lat,
-        lon=lon
-    )
-
-
-async def ask_gemini_to_rank_places(
-    user_prompt: str,
-    user_preferences: dict,
-    weather: dict,
-    places: list
-) -> list[DestinationMatchItem]:
-    """
-    Gives real TomTom places to Gemini and asks it
-    to select the most suitable destinations.
-    """
-
-    # Create Gemini client.
-    client = get_gemini_client()
-
-    # Give Gemini the user's request, preferences,
-    # current weather and REAL places from TomTom.
-    prompt = f"""
-You are Auckland Explorer's recommendation engine.
-
-USER REQUEST:
-{user_prompt}
-
-USER PREFERENCES:
-{json.dumps(user_preferences)}
-
-CURRENT WEATHER:
-{json.dumps(weather)}
-
-REAL PLACES FROM TOMTOM:
-{json.dumps(places)}
-
-Choose the best places for the user.
-
-IMPORTANT RULES:
-- Only recommend places from the REAL PLACES list.
-- Do not invent a destination.
-- Consider the user's preferences.
-- Consider the current weather.
-- Return no more than 5 places.
-- Keep the recommendations relevant to the user's request.
-
-Return JSON in exactly this structure:
-
-{{
-    "recommendations": [
-        {{
-            "place_name": "...",
-            "category": "...",
-            "relevance_rationale": "...",
-            "auckland_council_url": "https://..."
-        }}
-    ]
-}}
-"""
-
-    # Ask Gemini to process the real data.
-    response = client.models.generate_content(
-    model=GEMINI_MODEL,
-    contents=prompt,
-    config=types.GenerateContentConfig(
-        temperature=0.2,
-        tools=[
-            types.Tool(
-                google_search=types.GoogleSearch()
-            )
-        ],
-        response_mime_type="application/json"
-    )
-)
-    # Gemini's response.text can be either a string or None.
-    response_text = response.text
-
-    # If Gemini returned no text, stop instead of
-    # passing None into json.loads().
-    if response_text is None:
+    if not places:
         raise RuntimeError(
-            "GEMINI_EMPTY_RESPONSE"
+            "LIVE_PLACE_SEARCH_UNAVAILABLE"
         )
 
-    # Convert Gemini's JSON string into a Python dictionary.
-    data = json.loads(response_text)
-
-    # Get the recommendation list from Gemini's response.
-    recommendations = data.get(
-        "recommendations",
-        []
+    return await ask_ai(
+        user_prompt,
+        user_preferences,
+        weather,
+        places,
+        lat,
+        lon
     )
 
-    # Convert each recommendation into a Pydantic
-    # DestinationMatchItem so the output is validated.
-    return [
-        DestinationMatchItem(**item)
-        for item in recommendations[:5]
-    ]
 
+async def ask_ai(
+    user_prompt,
+    preferences,
+    weather,
+    places,
+    lat,
+    lon
+):
 
-async def ask_gemini_to_search_places(
-    user_prompt: str,
-    user_preferences: dict,
-    weather: dict,
-    lat: float,
-    lon: float
-) -> list[DestinationMatchItem]:
-    """
-    Fallback place-discovery system.
+    client = get_nvidia_client()
 
-    Used when TomTom cannot provide live places.
+    budget = preferences.get("budget")
+    transport_mode = preferences.get(
+        "transport",
+        "public_transport"
+    )
 
-    Gemini uses Google Search grounding to find
-    real places instead of using hardcoded destinations.
-    """
-
-    # Create Gemini client.
-    client = get_gemini_client()
-
-    # Tell Gemini to search for real places.
     prompt = f"""
-You are Auckland Explorer's fallback live-place discovery system.
+You are Auckland Explorer.
 
-The TomTom place-search service is currently unavailable.
-
-Use Google Search to find REAL and CURRENT places in Auckland.
+Your job is to recommend suitable REAL Auckland destinations.
 
 USER REQUEST:
 {user_prompt}
 
 USER PREFERENCES:
-{json.dumps(user_preferences)}
+{json.dumps(preferences, ensure_ascii=False)}
 
-USER LOCATION:
-latitude={lat}
-longitude={lon}
+USER BUDGET:
+${budget if budget is not None else "not specified"}
 
-CURRENT WEATHER:
-{json.dumps(weather)}
+TRANSPORT:
+{transport_mode}
 
-IMPORTANT RULES:
-- Search for real places.
-- Do not invent destinations.
-- Verify that the places actually exist.
-- Prefer official Auckland Council or official venue websites.
-- Consider the user's preferences.
-- Consider the current weather.
-- Return no more than 5 recommendations.
-- Include a source URL for every recommendation.
+LIVE WEATHER:
+{json.dumps(weather, ensure_ascii=False)}
 
-Return JSON in exactly this structure:
+REAL TOMTOM PLACES:
+{json.dumps(places, ensure_ascii=False)}
+
+RULES:
+
+1. Only recommend places contained in the REAL TOMTOM PLACES.
+2. Never invent a destination.
+3. Consider weather.
+4. Consider distance.
+5. Consider the user's transport preference.
+6. Consider the user's budget.
+7. Return no more than 5 destinations.
+8. Give a concise reason for every recommendation.
+9. Do not invent transport fares or ETAs.
+10. If live transport information is unavailable, say so.
+11. Keep the entire response concise.
+12. Return ONLY JSON.
+
+Return exactly:
 
 {{
-    "recommendations": [
-        {{
-            "place_name": "...",
-            "category": "...",
-            "relevance_rationale": "...",
-            "auckland_council_url": "https://..."
-        }}
-    ]
+  "summary": "Short overall recommendation.",
+  "recommendations": [
+    {{
+      "place_name": "...",
+      "category": "...",
+      "relevance_rationale": "...",
+      "auckland_council_url": "https://www.aucklandcouncil.govt.nz/",
+      "latitude": 0,
+      "longitude": 0
+    }}
+  ]
 }}
 """
 
     try:
-
-        # Ask Gemini to use Google Search to find current information.
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                tools=[
-                    types.Tool(
-                        google_search=types.GoogleSearch()
-                    )
-                ],
-                response_mime_type="application/json"
-            )
+        response = client.chat.completions.create(
+            model=NVIDIA_MODEL,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            top_p=0.95,
+            max_tokens=3000,
+            stream=False
         )
 
-        # Gemini's text response may be None.
-        response_text = response.text
+        text = response.choices[0].message.content
 
-        # Check before passing it to json.loads().
-        if response_text is None:
-            raise RuntimeError(
-                "GEMINI_EMPTY_RESPONSE"
-            )
+        if not text:
+            raise RuntimeError("AI_EMPTY_RESPONSE")
 
-        # Convert Gemini's JSON string into a Python dictionary.
-        data = json.loads(response_text)
+        # Models sometimes wrap otherwise valid JSON in a Markdown code fence.
+        if text.startswith("```") and text.endswith("```"):
+            text = text.split("\n", 1)[1].rsplit("\n", 1)[0]
 
-        # Extract the recommendations.
-        recommendations = data.get(
-            "recommendations",
-            []
-        )
-
-        # Validate each recommendation using schemas.py.
-        return [
-            DestinationMatchItem(**item)
-            for item in recommendations[:5]
-        ]
+        data = json.loads(text)
 
     except Exception as exc:
+        logger.exception("AI request failed.")
+        raise RuntimeError("AI_MODEL_UNAVAILABLE") from exc
 
-        # Both the original place-search route and
-        # the fallback search route have failed.
-        #
-        # We deliberately DO NOT invent a destination.
+    try:
+        recommendations = [
+            DestinationMatchItem(**item)
+            for item in data.get("recommendations", [])[:5]
+        ]
+    except (AttributeError, TypeError, ValueError) as exc:
+        logger.exception("AI response has an invalid recommendation shape.")
+        raise RuntimeError("AI_INVALID_RESPONSE") from exc
+
+    if not recommendations:
         raise RuntimeError(
-            "LIVE_PLACE_SEARCH_UNAVAILABLE"
-        ) from exc
+            "AI_NO_VALID_RECOMMENDATIONS"
+        )
+
+    first = recommendations[0]
+
+    if first.latitude is None or first.longitude is None:
+        raise RuntimeError("AI_INVALID_RESPONSE")
+
+    transport = await get_transport_info(
+        user_lat=lat,
+        user_lon=lon,
+        dest_lat=first.latitude,
+        dest_lon=first.longitude,
+        budget=preferences.get("budget"),
+        transport_mode=transport_mode
+    )
+
+    return {
+        "summary": data.get("summary", ""),
+        "recommendations": recommendations,
+        "transport": transport
+    }

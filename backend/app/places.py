@@ -79,15 +79,18 @@ def get_auckland_places(
             address = item.get("address", {})
             position = item.get("position", {})
 
+            place_lat = position.get("lat")
+            place_lon = position.get("lon")
+            if place_lat is None or place_lon is None:
+                  continue
             places.append({
-                "name": poi.get("name"),
-                "category": target_category,
-                "address": address.get("freeformAddress"),
-                "distance_meters": item.get("distance"),
-                "latitude": position.get("lat"),
-                "longitude": position.get("lon")
-            })
-
+                    "name": poi.get("name"),
+                    "category": target_category,
+                    "address": address.get("freeformAddress"),
+                    "distance_meters": item.get("distance"),
+                    "latitude": place_lat,
+                    "longitude": place_lon
+})  
         return {
             "status": "success",
             "places": places
