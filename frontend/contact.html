@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Contact · Auckland Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<nav class="nav">
+    <a class="brand" href="index.html">🌊 Auckland Explorer</a>
+
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="explore.html">Explore</a>
+        <a href="chat.html">AI Explorer</a>
+        <a href="contact.html">Contact</a>
+    </div>
+</nav>
+
+<main class="container">
+
+<section class="section">
+
+    <div class="section-title">
+        <p>FEEDBACK</p>
+        <h1>Help improve Auckland Explorer</h1>
+        <p>
+            Tell us what you liked and what could be improved.
+        </p>
+    </div>
+
+    <form class="form" id="contactForm">
+
+        <input
+            class="input"
+            id="contactName"
+            placeholder="Your name"
+            required
+        >
+
+        <input
+            class="input"
+            id="contactEmail"
+            type="email"
+            placeholder="Email (optional)"
+        >
+
+        <textarea
+            id="liked"
+            placeholder="What did you like?"
+            required
+        ></textarea>
+
+        <textarea
+            id="improvements"
+            placeholder="What should we improve?"
+            required
+        ></textarea>
+
+        <button class="btn btn-primary" type="submit">
+            Send feedback →
+        </button>
+
+        <p id="contactStatus"></p>
+
+    </form>
+
+</section>
+
+<section class="section">
+    <div class="card">
+        <h2>About the creator</h2>
+        <p>
+            Auckland Explorer is a student-developed AI project
+            designed to make discovering Auckland easier through
+            intelligent recommendations and live information.
+        </p>
+
+        <p>
+            Developer: <strong>Rishikesh Sriram</strong>
+        </p>
+        <p>
+            Email: sriramr@wsc.school.nz
+        </p>
+    </div>
+</section>
+
+</main>
+
+<footer class="footer">
+    Auckland Explorer · Tāmaki Makaurau
+</footer>
+
+<script src="app.js"></script>
+
+</body>
+</html>
