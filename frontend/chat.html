@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+
+    <title>AI Explorer · Auckland</title>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<nav class="nav">
+    <a class="brand" href="index.html">🌊 Auckland Explorer</a>
+
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="explore.html">Explore</a>
+        <a href="chat.html">AI Explorer</a>
+        <a href="contact.html">Contact</a>
+    </div>
+</nav>
+
+<main class="chat-layout">
+
+    <div class="card">
+        <div style="display:flex;justify-content:space-between;gap:15px;">
+            <div>
+                <p>AI TRAVEL GUIDE</p>
+                <h1>Where should we go?</h1>
+            </div>
+
+            <button
+                class="btn btn-secondary"
+                onclick="locateMe()">
+                📍 Locate
+            </button>
+        </div>
+
+        <p id="geoLabel">
+            Locating your position...
+        </p>
+
+        <div id="exploreMap"></div>
+    </div>
+
+    <div class="card chat-box" id="chatThread">
+
+        <div class="message ai">
+            <strong>Auckland Explorer</strong><br>
+            Kia ora! Tell me what you want to do in Auckland.
+            Include your budget or preferred transport if relevant.
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="grid">
+
+            <button
+                class="btn btn-secondary"
+                onclick="quickSend('Find me a peaceful beach')">
+                🏖️ Beach
+            </button>
+
+            <button
+                class="btn btn-secondary"
+                onclick="quickSend('Find me a peaceful park walk')">
+                🌿 Park
+            </button>
+
+            <button
+                class="btn btn-secondary"
+                onclick="quickSend('Find something interesting to do in Auckland')">
+                ✨ Attractions
+            </button>
+
+        </div>
+
+        <form id="chatForm" style="margin-top:15px;">
+
+            <div class="grid">
+
+                <select id="fMode">
+                    <option value="public_transport">
+                        🚌 Public transport
+                    </option>
+
+                    <option value="drive">
+                        🚗 Drive
+                    </option>
+
+                    <option value="cycle">
+                        🚴 Cycle
+                    </option>
+
+                    <option value="walk">
+                        🚶 Walk
+                    </option>
+                </select>
+
+                <select id="fRadius">
+                    <option value="2000">2 km</option>
+                    <option value="5000">5 km</option>
+                    <option value="10000" selected>10 km</option>
+                    <option value="25000">25 km</option>
+                    <option value="50000">50 km</option>
+                </select>
+
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:12px;">
+
+                <input
+                    class="input"
+                    id="fInput"
+                    placeholder="e.g. quiet beach under $20 by bus"
+                    required
+                >
+
+                <button
+                    class="btn btn-primary"
+                    id="sendBtn">
+                    Send →
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
