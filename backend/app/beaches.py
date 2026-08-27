@@ -8,7 +8,6 @@ import logging
 from fastapi import HTTPException, status
 from typing import Dict, Any
 
-from scipy import spatial
 from app.schemas import GeolocationCoordinates
 
 # Set up system process tracing logging

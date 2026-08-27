@@ -166,16 +166,24 @@ Return exactly:
         if not text:
             raise RuntimeError("AI_EMPTY_RESPONSE")
 
+        # Models sometimes wrap otherwise valid JSON in a Markdown code fence.
+        if text.startswith("```") and text.endswith("```"):
+            text = text.split("\n", 1)[1].rsplit("\n", 1)[0]
+
         data = json.loads(text)
 
     except Exception as exc:
         logger.exception("AI request failed.")
         raise RuntimeError("AI_MODEL_UNAVAILABLE") from exc
 
-    recommendations = [
-        DestinationMatchItem(**item)
-        for item in data.get("recommendations", [])[:5]
-    ]
+    try:
+        recommendations = [
+            DestinationMatchItem(**item)
+            for item in data.get("recommendations", [])[:5]
+        ]
+    except (AttributeError, TypeError, ValueError) as exc:
+        logger.exception("AI response has an invalid recommendation shape.")
+        raise RuntimeError("AI_INVALID_RESPONSE") from exc
 
     if not recommendations:
         raise RuntimeError(
@@ -183,6 +191,9 @@ Return exactly:
         )
 
     first = recommendations[0]
+
+    if first.latitude is None or first.longitude is None:
+        raise RuntimeError("AI_INVALID_RESPONSE")
 
     transport = await get_transport_info(
         user_lat=lat,
