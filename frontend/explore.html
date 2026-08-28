@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Explore Auckland</title>
+
+    <title>Explore Auckland · Auckland Explorer</title>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -14,21 +19,28 @@
 
     <div class="nav-links">
         <a href="index.html">Home</a>
-        <a href="explore.html">Explore</a>
+        <a href="explore.html" class="active">Explore</a>
         <a href="chat.html">AI Explorer</a>
         <a href="contact.html">Contact</a>
     </div>
 </nav>
 
+
 <main class="container">
 
-<section class="section">
+    <!-- HERO -->
+    <section class="section">
+
     <div class="section-title">
         <p>DISCOVER TAMAKI MAKAURAU</p>
-        <h1>Explore Auckland</h1>
+
+        <h1>
+            Explore
+            <span class="gradient-text">Auckland</span>
+        </h1>
+
         <p>
-            Browse places and then ask the AI Explorer
-            to personalise your trip.
+            Choose a category to discover Auckland.
         </p>
     </div>
 
@@ -38,10 +50,12 @@
             <div class="card-icon">🏖️</div>
             <h2>Beaches</h2>
             <p>
-                Discover Auckland's coastline, swimming spots
+                Explore Auckland's most popular beaches
                 and coastal destinations.
             </p>
-            <a class="btn btn-secondary" href="chat.html">
+
+            <a class="btn btn-secondary"
+               href="beaches.html">
                 Explore beaches →
             </a>
         </article>
@@ -50,10 +64,12 @@
             <div class="card-icon">🌿</div>
             <h2>Parks</h2>
             <p>
-                Find parks, reserves and green spaces for walks,
-                relaxation and recreation.
+                Discover parks, reserves and green spaces
+                across Auckland.
             </p>
-            <a class="btn btn-secondary" href="chat.html">
+
+            <a class="btn btn-secondary"
+               href="parks.html">
                 Explore parks →
             </a>
         </article>
@@ -62,36 +78,81 @@
             <div class="card-icon">🏙️</div>
             <h2>City & attractions</h2>
             <p>
-                Find interesting destinations, activities and
-                places worth visiting around Auckland.
+                Discover Auckland's most interesting
+                attractions and destinations.
             </p>
-            <a class="btn btn-secondary" href="chat.html">
-                Explore places →
+
+            <a class="btn btn-secondary"
+               href="attractions.html">
+                Explore attractions →
             </a>
         </article>
 
     </div>
+
 </section>
 
-<section class="section">
-    <div class="card glow">
-        <h2>Want something personalised?</h2>
-        <p>
-            Tell Auckland Explorer what you want to do,
-            your budget and how you want to travel.
-        </p>
 
-        <a class="btn btn-primary" href="chat.html">
-            ✨ Ask the AI
-        </a>
-    </div>
-</section>
+    <!-- MAP -->
+    <section class="section">
+
+        <div class="section-title">
+            <p>YOUR AUCKLAND MAP</p>
+            <h2>Find your next destination</h2>
+        </div>
+
+        <div class="card glow">
+
+            <div id="exploreMap"></div>
+
+            <div class="map-info">
+                <span id="mapStatus">
+                    📍 Enable location to calculate distances.
+                </span>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- AI CTA -->
+    <section class="section">
+
+        <div class="card glow ai-cta">
+
+            <p>NEED SOMETHING MORE PERSONAL?</p>
+
+            <h2>
+                Let Auckland Explorer
+                find the right place for you.
+            </h2>
+
+            <p>
+                Tell the AI what you want, your preferred transport,
+                budget and location.
+            </p>
+
+            <a href="chat.html"
+               class="btn btn-primary">
+                ✨ Ask Auckland Explorer
+            </a>
+
+        </div>
+
+    </section>
 
 </main>
+
 
 <footer class="footer">
     Auckland Explorer · Tāmaki Makaurau
 </footer>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="places.js"></script>
+<script src="explore.js"></script>
 
 </body>
 </html>
