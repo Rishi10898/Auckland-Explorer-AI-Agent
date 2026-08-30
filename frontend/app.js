@@ -237,3 +237,15 @@ function escapeHtml(value) {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
 }
+function loadPromptFromUrl() {
+    const prompt = new URLSearchParams(
+        window.location.search
+    ).get("prompt");
+
+    const input = document.getElementById("fInput");
+
+    if (prompt && input) {
+        input.value = prompt;
+        input.focus();
+    }
+}

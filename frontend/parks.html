@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,initial-scale=1"
+    >
+
+    <title>Parks · Auckland Explorer</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
+
+</head>
+
+
+<body>
+
+<nav class="nav">
+
+    <a
+        class="brand"
+        href="index.html"
+    >
+        🌊 Auckland Explorer
+    </a>
+
+
+    <div class="nav-links">
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="explore.html">
+            Explore
+        </a>
+
+        <a href="chat.html">
+            AI Explorer
+        </a>
+
+        <a href="contact.html">
+            Contact
+        </a>
+
+    </div>
+
+</nav>
+
+
+<main class="container">
+
+    <section class="section">
+
+        <div class="section-title">
+
+            <p>
+                GREEN SPACES OF TĀMAKI MAKAURAU
+            </p>
+
+            <h1>
+                Explore Auckland
+                <span class="gradient-text">
+                    parks.
+                </span>
+            </h1>
+
+            <p>
+                Discover green spaces, regional parks,
+                walking areas and some of Auckland's most
+                significant natural landscapes.
+            </p>
+
+        </div>
+
+
+        <div
+            id="placesGrid"
+            class="places-grid"
+        >
+        </div>
+
+    </section>
+
+</main>
+
+
+<div
+    id="locationPopup"
+    class="location-popup"
+>
+
+    <div class="location-popup-card">
+
+        <button
+            id="closeLocationPopup"
+            class="location-popup-close"
+            type="button"
+            aria-label="Close location map"
+        >
+            ×
+        </button>
+
+
+        <p>
+            LOCATION
+        </p>
+
+
+        <h2
+            id="popupPlaceName"
+        >
+            Destination
+        </h2>
+
+
+        <p
+            id="popupDistance"
+            class="popup-distance"
+        >
+            Getting your location...
+        </p>
+
+
+        <div
+            id="destinationMap"
+        >
+        </div>
+
+
+        <p class="map-note">
+            Distance shown is approximate straight-line distance.
+        </p>
+
+    </div>
+
+</div>
+
+
+<footer class="footer">
+    Auckland Explorer · Tāmaki Makaurau
+</footer>
+
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+>
+</script>
+
+<script src="parks.js"></script>
+
+</body>
+
+</html>
