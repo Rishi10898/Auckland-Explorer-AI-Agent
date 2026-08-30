@@ -15,7 +15,7 @@ const PLACES = [
         region: "Auckland CBD",
         lat: -36.8485,
         lon: 174.7622,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwzkyW46MPo1kuOS9Lut_L11pa_EFCHPRZp9lx0azS3Q&s=10",
         points: [
             "One of Auckland's most recognisable landmarks.",
             "Panoramic views across the city.",
@@ -30,7 +30,7 @@ const PLACES = [
         region: "Auckland Domain",
         lat: -36.8600,
         lon: 174.7760,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRe59iDy5w_ExZpaN48WSBlKDSGrk8Rt3hFaTIU8-Txfg&s=10",
         points: [
             "Major cultural institution.",
             "Located inside Auckland Domain.",
@@ -45,7 +45,7 @@ const PLACES = [
         region: "Auckland CBD",
         lat: -36.8520,
         lon: 174.7650,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQcGwHQ-AgnEc3t3ROiJWqE5YAqtqbc1jud_hMUoo9ENQ&s=10",
         points: [
             "Major art collection.",
             "Central city location.",
@@ -60,7 +60,7 @@ const PLACES = [
         region: "Auckland CBD",
         lat: -36.8410,
         lon: 174.7550,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtoJG5Q_-7YRXyWQymiOv0En2RX4hrujxqUcn4yK_B3A&s=10",
         points: [
             "Waterfront destination.",
             "Restaurants, public spaces and events.",
@@ -75,7 +75,7 @@ const PLACES = [
         region: "Auckland CBD",
         lat: -36.8440,
         lon: 174.7620,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSTf5QDtpN4bwf1cfA4ObxEWs7DxoDaQdCHnRCZFW0eyg&s=10",
         points: [
             "Iconic Auckland waterfront.",
             "Restaurants and public spaces.",
@@ -90,7 +90,7 @@ const PLACES = [
         region: "Western Springs",
         lat: -36.8640,
         lon: 174.7190,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5QCP8uo1okcCLMEA7GQ3p8qhVs2NgQxL89I7jQ0ME8g&s=10",
         points: [
             "Major Auckland wildlife attraction.",
             "Located beside Western Springs.",
@@ -105,7 +105,7 @@ const PLACES = [
         region: "Western Springs",
         lat: -36.8670,
         lon: 174.7130,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSX4JopYlYngdPeMdPCqUbiiJ5JHAY-izt1O9Ho-14veQ&s=10",
         points: [
             "Transport and technology museum.",
             "Interactive exhibits.",
@@ -120,7 +120,7 @@ const PLACES = [
         region: "North Shore",
         lat: -36.8310,
         lon: 174.7960,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRjccJurp7SgEud4b4AXYSr57BIBCp7zpw-RFuByfsKNQ&s=10",
         points: [
             "Historic waterfront suburb.",
             "Views across Auckland Harbour.",
@@ -135,7 +135,7 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.9010,
         lon: 174.7830,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRPRotAQmkMDRWXzH-21FG6e5PkVypeuaFn8vGjNx8P4A&s=10",
         points: [
             "Iconic Auckland landmark.",
             "Excellent panoramic views.",
@@ -150,7 +150,7 @@ const PLACES = [
         region: "Auckland CBD",
         lat: -36.8440,
         lon: 174.7600,
-        image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTiMj-6S6TXz8rf0b6ZhL18dwkr7w__iIjGSL2KM0OdaQ&s=10",
         points: [
             "Central harbour destination.",
             "Walking and public spaces.",
