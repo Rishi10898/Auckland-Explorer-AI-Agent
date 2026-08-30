@@ -160,432 +160,341 @@ const PLACES = {
             council: "https://www.aucklandcouncil.govt.nz/"
         }
     ]
-}
-// ============================================================
-// BEACH PAGE CONTROLLER
-// Renders destination data and handles location interactions.
-// ============================================================
-
+};
+/* =========================================================
+   APPLICATION STATE
+   ========================================================= */
 
 let userLocation = null;
+
 let destinationMap = null;
-let mapMarkers = [];
 
 
-// Run after the HTML page has loaded.
+/* =========================================================
+   PAGE STARTUP
+   ========================================================= */
+
 document.addEventListener(
     "DOMContentLoaded",
-    renderBeaches
+    () => {
+
+        renderPlaces();
+
+        setupPopup();
+
+    }
 );
 
 
-// Create one card for every beach in the data array.
-function renderBeaches() {
+/* =========================================================
+   RENDER CARDS
+   ========================================================= */
+
+function renderPlaces() {
 
     const grid =
         document.getElementById("placesGrid");
 
+    if (!grid) return;
 
-    if (!grid) {
 
-        console.error(
-            "placesGrid was not found in beaches.html"
-        );
+    grid.innerHTML =
+        PLACES.map(
+            (place, index) => `
+
+            <article class="card place-card">
+
+                <img
+                    class="place-image"
+                    src="${place.image}"
+                    alt="${place.name}"
+                >
+
+                <p class="place-region">
+                    ${place.region}
+                </p>
+
+                <h2>
+                    ${place.name}
+                </h2>
+
+                <ul class="place-points">
+
+                    ${place.points
+                        .map(
+                            point =>
+                                `<li>${point}</li>`
+                        )
+                        .join("")
+                    }
+
+                </ul>
+
+                <div class="place-actions">
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="showLocation(${index})"
+                    >
+                        📍 View location
+                    </button>
+
+                    <a
+                        class="btn btn-secondary"
+                        href="${place.council}"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        More information →
+                    </a>
+
+                </div>
+
+            </article>
+
+        `
+        )
+        .join("");
+
+}
+
+
+/* =========================================================
+   POPUP SETUP
+   ========================================================= */
+
+function setupPopup() {
+
+    const popup =
+        document.getElementById("locationPopup");
+
+    const closeButton =
+        document.getElementById("closeLocationPopup");
+
+
+    closeButton?.addEventListener(
+        "click",
+        closeLocationPopup
+    );
+
+
+    popup?.addEventListener(
+        "click",
+        event => {
+
+            if (event.target === popup) {
+
+                closeLocationPopup();
+
+            }
+
+        }
+    );
+
+}
+
+
+function closeLocationPopup() {
+
+    document
+        .getElementById("locationPopup")
+        ?.classList.remove("active");
+
+}
+
+
+/* =========================================================
+   SHOW DESTINATION LOCATION
+   ========================================================= */
+
+function showLocation(index) {
+
+    const place =
+        PLACES[index];
+
+
+    document
+        .getElementById("locationPopup")
+        ?.classList.add("active");
+
+
+    document
+        .getElementById("popupPlaceName")
+        .textContent =
+            place.name;
+
+
+    getUserLocation(
+        () => {
+
+            const distance =
+                calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    place.lat,
+                    place.lon
+                );
+
+
+            document
+                .getElementById("popupDistance")
+                .textContent =
+                    `Approximately ${distance.toFixed(1)} km from your location.`;
+
+
+            createMap(place);
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   USER GEOLOCATION
+   ========================================================= */
+
+function getUserLocation(callback) {
+
+    if (userLocation) {
+
+        callback();
 
         return;
 
     }
 
 
-    grid.innerHTML =
-        PLACES.beaches
-            .map(
-                (place, index) => `
-                
-                <article class="place-card">
+    if (!navigator.geolocation) {
 
-                    <img
-                        class="place-image"
-                        src="${place.image}"
-                        alt="${place.name}"
-                        loading="lazy"
-                    >
+        userLocation = {
+            latitude: -36.8485,
+            longitude: 174.7633
+        };
 
-                    <div class="place-content">
+        callback();
 
-                        <span class="place-region">
-                            ${place.region}
-                        </span>
+        return;
+
+    }
 
 
-                        <h2>
-                            ${place.name}
-                        </h2>
+    navigator.geolocation.getCurrentPosition(
+
+        position => {
+
+            userLocation = {
+
+                latitude:
+                    position.coords.latitude,
+
+                longitude:
+                    position.coords.longitude
+
+            };
+
+            callback();
+
+        },
 
 
-                        <p class="place-description">
-                            ${place.info}
-                        </p>
+        () => {
 
+            userLocation = {
+                latitude: -36.8485,
+                longitude: 174.7633
+            };
 
-                        <ul class="place-points">
-
-                            ${place.points
-                                .map(
-                                    point => `
-                                        <li>
-                                            ${point}
-                                        </li>
-                                    `
-                                )
-                                .join("")
-                            }
-
-                        </ul>
-
-
-                        <div class="place-actions">
-
-                            <a
-                                class="btn btn-secondary"
-                                href="${place.council}"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                More information ↗
-                            </a>
-
-
-                            <button
-                                class="location-circle"
-                                type="button"
-                                onclick="showLocation(${index})"
-                                title="View location"
-                            >
-                                📍
-                            </button>
-
-                        </div>
-
-
-                        <button
-                            class="ask-ai-button"
-                            type="button"
-                            onclick="askAI('${place.name}')"
-                        >
-                            ✨ Ask AI about this place
-                        </button>
-
-                    </div>
-
-                </article>
-
-                `
-            )
-            .join("");
-
-}
-
-
-// Gets the user's current position.
-function getUserLocation() {
-
-    return new Promise(
-        (resolve, reject) => {
-
-            if (
-                !navigator.geolocation
-            ) {
-
-                reject(
-                    new Error(
-                        "Geolocation is not supported."
-                    )
-                );
-
-                return;
-
-            }
-
-
-            navigator.geolocation
-                .getCurrentPosition(
-
-                    position => {
-
-                        userLocation = {
-
-                            latitude:
-                                position.coords.latitude,
-
-                            longitude:
-                                position.coords.longitude
-
-                        };
-
-
-                        resolve(
-                            userLocation
-                        );
-
-                    },
-
-
-                    error => {
-
-                        reject(error);
-
-                    },
-
-
-                    {
-
-                        enableHighAccuracy: true,
-
-                        timeout: 10000,
-
-                        maximumAge: 300000
-
-                    }
-
-                );
+            callback();
 
         }
+
     );
 
 }
 
 
-// Opens the map popup for the selected beach.
-async function showLocation(index) {
+/* =========================================================
+   CREATE MAP
+   ========================================================= */
 
-    const place =
-        PLACES.beaches[index];
+function createMap(place) {
 
+    if (destinationMap) {
 
-    const modal =
-        document.getElementById(
-            "locationModal"
-        );
-
-
-    const title =
-        document.getElementById(
-            "mapPlaceName"
-        );
-
-
-    const distanceText =
-        document.getElementById(
-            "mapDistance"
-        );
-
-
-    modal.classList.add(
-        "open"
-    );
-
-
-    title.textContent =
-        place.name;
-
-
-    distanceText.textContent =
-        "Getting your location...";
-
-
-    try {
-
-        const user =
-            await getUserLocation();
-
-
-        const distance =
-            calculateDistance(
-
-                user.latitude,
-                user.longitude,
-
-                place.lat,
-                place.lon
-
-            );
-
-
-        distanceText.textContent =
-            `${distance.toFixed(1)} km away from you`;
-
-
-        openMap(
-            user,
-            place
-        );
-
-
-        document
-            .getElementById(
-                "googleMapsLink"
-            )
-            .href =
-                `https://www.google.com/maps/dir/${user.latitude},${user.longitude}/${place.lat},${place.lon}`;
-
-
-    }
-
-    catch (error) {
-
-        console.error(
-            error
-        );
-
-
-        distanceText.textContent =
-            "Location could not be accessed. Please allow location permission.";
-
-    }
-
-}
-
-
-// Creates the Leaflet map.
-function openMap(
-    user,
-    place
-) {
-
-    if (
-        !destinationMap
-    ) {
-
-        destinationMap =
-            L.map(
-                "destinationMap"
-            );
-
-
-        L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-
-                attribution:
-                    "&copy; OpenStreetMap contributors"
-
-            }
-        )
-        .addTo(
-            destinationMap
-        );
+        destinationMap.remove();
 
     }
 
 
-    mapMarkers.forEach(
-        marker =>
-            destinationMap.removeLayer(
-                marker
-            )
-    );
+    destinationMap =
+        L.map("destinationMap");
 
 
-    mapMarkers = [];
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution:
+                "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(destinationMap);
 
 
-    const userMarker =
-        L.marker(
-            [
-
-                user.latitude,
-
-                user.longitude
-
-            ]
-        )
-        .addTo(
-            destinationMap
-        )
-        .bindPopup(
-            "Your location"
-        );
+    const user =
+        [
+            userLocation.latitude,
+            userLocation.longitude
+        ];
 
 
-    const placeMarker =
-        L.marker(
-            [
-
-                place.lat,
-
-                place.lon
-
-            ]
-        )
-        .addTo(
-            destinationMap
-        )
-        .bindPopup(
-            place.name
-        );
+    const destination =
+        [
+            place.lat,
+            place.lon
+        ];
 
 
-    mapMarkers.push(
+    L.marker(user)
+        .addTo(destinationMap)
+        .bindPopup("Your location");
 
-        userMarker,
 
-        placeMarker
-
-    );
+    L.marker(destination)
+        .addTo(destinationMap)
+        .bindPopup(place.name);
 
 
     const bounds =
         L.latLngBounds(
-
-            [
-
-                [
-
-                    user.latitude,
-
-                    user.longitude
-
-                ],
-
-                [
-
-                    place.lat,
-
-                    place.lon
-
-                ]
-
-            ]
-
+            user,
+            destination
         );
 
 
     destinationMap.fitBounds(
         bounds,
         {
-
-            padding:
-                [40, 40]
-
+            padding: [50, 50]
         }
     );
 
 
-    // Required because Leaflet is created inside a hidden modal.
     setTimeout(
+        () => {
 
-        () =>
-            destinationMap.invalidateSize(),
+            destinationMap.invalidateSize();
 
-        200
-
+        },
+        100
     );
 
 }
 
 
-// Calculates straight-line distance using coordinates.
+/* =========================================================
+   DISTANCE CALCULATION
+   ========================================================= */
+
 function calculateDistance(
     lat1,
     lon1,
@@ -593,7 +502,7 @@ function calculateDistance(
     lon2
 ) {
 
-    const earthRadius =
+    const radius =
         6371;
 
 
@@ -618,17 +527,13 @@ function calculateDistance(
         +
 
         Math.cos(
-            degreesToRadians(
-                lat1
-            )
+            degreesToRadians(lat1)
         )
 
         *
 
         Math.cos(
-            degreesToRadians(
-                lat2
-            )
+            degreesToRadians(lat2)
         )
 
         *
@@ -638,56 +543,28 @@ function calculateDistance(
         ) ** 2;
 
 
-    const centralAngle =
+    return
+
+        radius
+
+        *
 
         2
 
         *
 
         Math.atan2(
-
-            Math.sqrt(
-                calculation
-            ),
-
-            Math.sqrt(
-                1 - calculation
-            )
-
+            Math.sqrt(calculation),
+            Math.sqrt(1 - calculation)
         );
-
-
-    return (
-        earthRadius
-        *
-        centralAngle
-    );
 
 }
 
 
-// Converts degrees into radians for the distance formula.
 function degreesToRadians(
     degrees
 ) {
 
-    return (
-        degrees
-        *
-        Math.PI
-        /
-        180
-    );
-
-}
-// Opens the AI chat with the destination already entered.
-function askAI(
-    placeName
-) {
-
-    window.location.href =
-        `chat.html?place=${encodeURIComponent(
-            placeName
-        )}`;
+    return degrees * Math.PI / 180;
 
 }

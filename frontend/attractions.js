@@ -158,3 +158,410 @@ attractions: [
         }
     ]
 }
+/* =========================================================
+   APPLICATION STATE
+   ========================================================= */
+
+let userLocation = null;
+
+let destinationMap = null;
+
+
+/* =========================================================
+   PAGE STARTUP
+   ========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        renderPlaces();
+
+        setupPopup();
+
+    }
+);
+
+
+/* =========================================================
+   RENDER CARDS
+   ========================================================= */
+
+function renderPlaces() {
+
+    const grid =
+        document.getElementById("placesGrid");
+
+    if (!grid) return;
+
+
+    grid.innerHTML =
+        PLACES.map(
+            (place, index) => `
+
+            <article class="card place-card">
+
+                <img
+                    class="place-image"
+                    src="${place.image}"
+                    alt="${place.name}"
+                >
+
+                <p class="place-region">
+                    ${place.region}
+                </p>
+
+                <h2>
+                    ${place.name}
+                </h2>
+
+                <ul class="place-points">
+
+                    ${place.points
+                        .map(
+                            point =>
+                                `<li>${point}</li>`
+                        )
+                        .join("")
+                    }
+
+                </ul>
+
+                <div class="place-actions">
+
+                    <button
+                        class="btn btn-secondary"
+                        onclick="showLocation(${index})"
+                    >
+                        📍 View location
+                    </button>
+
+                    <a
+                        class="btn btn-secondary"
+                        href="${place.council}"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        More information →
+                    </a>
+
+                </div>
+
+            </article>
+
+        `
+        )
+        .join("");
+
+}
+
+
+/* =========================================================
+   POPUP SETUP
+   ========================================================= */
+
+function setupPopup() {
+
+    const popup =
+        document.getElementById("locationPopup");
+
+    const closeButton =
+        document.getElementById("closeLocationPopup");
+
+
+    closeButton?.addEventListener(
+        "click",
+        closeLocationPopup
+    );
+
+
+    popup?.addEventListener(
+        "click",
+        event => {
+
+            if (event.target === popup) {
+
+                closeLocationPopup();
+
+            }
+
+        }
+    );
+
+}
+
+
+function closeLocationPopup() {
+
+    document
+        .getElementById("locationPopup")
+        ?.classList.remove("active");
+
+}
+
+
+/* =========================================================
+   SHOW DESTINATION LOCATION
+   ========================================================= */
+
+function showLocation(index) {
+
+    const place =
+        PLACES[index];
+
+
+    document
+        .getElementById("locationPopup")
+        ?.classList.add("active");
+
+
+    document
+        .getElementById("popupPlaceName")
+        .textContent =
+            place.name;
+
+
+    getUserLocation(
+        () => {
+
+            const distance =
+                calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    place.lat,
+                    place.lon
+                );
+
+
+            document
+                .getElementById("popupDistance")
+                .textContent =
+                    `Approximately ${distance.toFixed(1)} km from your location.`;
+
+
+            createMap(place);
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   USER GEOLOCATION
+   ========================================================= */
+
+function getUserLocation(callback) {
+
+    if (userLocation) {
+
+        callback();
+
+        return;
+
+    }
+
+
+    if (!navigator.geolocation) {
+
+        userLocation = {
+            latitude: -36.8485,
+            longitude: 174.7633
+        };
+
+        callback();
+
+        return;
+
+    }
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        position => {
+
+            userLocation = {
+
+                latitude:
+                    position.coords.latitude,
+
+                longitude:
+                    position.coords.longitude
+
+            };
+
+            callback();
+
+        },
+
+
+        () => {
+
+            userLocation = {
+                latitude: -36.8485,
+                longitude: 174.7633
+            };
+
+            callback();
+
+        }
+
+    );
+
+}
+
+
+/* =========================================================
+   CREATE MAP
+   ========================================================= */
+
+function createMap(place) {
+
+    if (destinationMap) {
+
+        destinationMap.remove();
+
+    }
+
+
+    destinationMap =
+        L.map("destinationMap");
+
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution:
+                "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(destinationMap);
+
+
+    const user =
+        [
+            userLocation.latitude,
+            userLocation.longitude
+        ];
+
+
+    const destination =
+        [
+            place.lat,
+            place.lon
+        ];
+
+
+    L.marker(user)
+        .addTo(destinationMap)
+        .bindPopup("Your location");
+
+
+    L.marker(destination)
+        .addTo(destinationMap)
+        .bindPopup(place.name);
+
+
+    const bounds =
+        L.latLngBounds(
+            user,
+            destination
+        );
+
+
+    destinationMap.fitBounds(
+        bounds,
+        {
+            padding: [50, 50]
+        }
+    );
+
+
+    setTimeout(
+        () => {
+
+            destinationMap.invalidateSize();
+
+        },
+        100
+    );
+
+}
+
+
+/* =========================================================
+   DISTANCE CALCULATION
+   ========================================================= */
+
+function calculateDistance(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const radius =
+        6371;
+
+
+    const latitudeDifference =
+        degreesToRadians(
+            lat2 - lat1
+        );
+
+
+    const longitudeDifference =
+        degreesToRadians(
+            lon2 - lon1
+        );
+
+
+    const calculation =
+
+        Math.sin(
+            latitudeDifference / 2
+        ) ** 2
+
+        +
+
+        Math.cos(
+            degreesToRadians(lat1)
+        )
+
+        *
+
+        Math.cos(
+            degreesToRadians(lat2)
+        )
+
+        *
+
+        Math.sin(
+            longitudeDifference / 2
+        ) ** 2;
+
+
+    return
+
+        radius
+
+        *
+
+        2
+
+        *
+
+        Math.atan2(
+            Math.sqrt(calculation),
+            Math.sqrt(1 - calculation)
+        );
+
+}
+
+
+function degreesToRadians(
+    degrees
+) {
+
+    return degrees * Math.PI / 180;
+
+}

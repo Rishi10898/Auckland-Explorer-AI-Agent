@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1">
+
+    <title>Auckland Attractions</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+
+<body>
+
+<nav class="nav">
+
+    <a class="brand" href="index.html">
+        🌊 Auckland Explorer
+    </a>
+
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="explore.html">Explore</a>
+        <a href="chat.html">AI Explorer</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
+</nav>
+
+
+<main class="container">
+
+    <!-- PAGE INTRODUCTION -->
+    <section class="section places-hero">
+        <h1>
+            <span class="gradient-text">
+                Auckland Attractions
+            </span>
+        </h1>
+
+        <p class="places-intro">
+            Discover some of Auckland's most popular attractions,
+            compare destinations and explore where they are
+            relative to your location.
+        </p>
+
+
+    <!-- ATTRACTION CARDS -->
+        <div class="section-title">
+
+            <h2>
+                Choose where you want to explore
+            </h2>
+
+            <p>
+                Select a destination to learn more,
+                check its distance or ask the AI Explorer
+                for personalised recommendations.
+            </p>
+
+        </div>
+        <!-- JavaScript inserts the 10 cards here -->
+        <div
+            class="places-grid"
+            id="placesGrid">
+
+        </div>
+</main>
+<!-- Location map popup -->
+<div id="locationPopup" class="location-popup">
+
+    <div class="location-popup-content">
+
+        <button
+            id="closeLocationPopup"
+            class="map-close-button"
+            type="button"
+        >
+            ×
+        </button>
+
+        <h2 id="popupPlaceName">
+            Destination
+        </h2>
+
+        <p id="popupDistance">
+            Calculating distance...
+        </p>
+
+        <div id="destinationMap"></div>
+
+    </div>
+
+</div>
+<footer class="footer">
+
+    Auckland Explorer · Tāmaki Makaurau
+
+</footer>
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+<script src="attractions.js"></script>
+</body>
+</html>
