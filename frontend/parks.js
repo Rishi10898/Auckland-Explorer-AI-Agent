@@ -1,6 +1,14 @@
 /*
  * Auckland Explorer
  * Parks destination page.
+ *
+ * Responsibilities:
+ * - Store park information.
+ * - Render park cards.
+ * - Get user location.
+ * - Show a Leaflet map inside a popup.
+ * - Calculate straight-line distance.
+ * - Send selected park to AI Explorer.
  */
 
 
@@ -163,27 +171,54 @@ const PLACES = [
 ];
 
 
+/* =========================================================
+   APPLICATION STATE
+   ========================================================= */
+
 let userLocation = null;
+
 let destinationMap = null;
 
+let userMarker = null;
+
+let placeMarker = null;
+
+
+/* =========================================================
+   PAGE STARTUP
+   ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
 
         renderPlaces();
+
         setupPopup();
 
     }
 );
 
 
+/* =========================================================
+   RENDER PARK CARDS
+   ========================================================= */
+
 function renderPlaces() {
 
     const grid =
         document.getElementById("placesGrid");
 
-    if (!grid) return;
+
+    if (!grid) {
+
+        console.error(
+            "placesGrid was not found."
+        );
+
+        return;
+
+    }
 
 
     grid.innerHTML =
@@ -199,77 +234,90 @@ function renderPlaces() {
                     loading="lazy"
                 >
 
-                <p class="place-region">
-                    ${place.region}
-                </p>
+                <div class="place-content">
 
-                <h2>
-                    ${place.name}
-                </h2>
+                    <p class="place-region">
+                        ${place.region}
+                    </p>
 
-                <p class="place-description">
-                    ${place.info}
-                </p>
+                    <h2>
+                        ${place.name}
+                    </h2>
 
-                <ul class="place-points">
+                    <p class="place-description">
+                        ${place.info}
+                    </p>
 
-                    ${place.points
-                        .map(
-                            point =>
-                                `<li>${point}</li>`
-                        )
-                        .join("")
-                    }
+                    <ul class="place-points">
 
-                </ul>
+                        ${place.points
+                            .map(
+                                point =>
+                                    `<li>${point}</li>`
+                            )
+                            .join("")
+                        }
 
+                    </ul>
 
-                <div class="place-actions">
+                    <div class="place-actions">
+
+                        <a
+                            class="btn btn-secondary"
+                            href="${place.council}"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            More information →
+                        </a>
+
+                        <button
+                            class="location-circle"
+                            type="button"
+                            onclick="showLocation(${index})"
+                            title="View location"
+                            aria-label="View location for ${place.name}"
+                        >
+                            📍
+                        </button>
+
+                    </div>
 
                     <button
-                        class="btn btn-secondary"
+                        class="ask-ai-button"
                         type="button"
-                        onclick="showLocation(${index})"
+                        onclick='askAI(${JSON.stringify(place.name)})'
                     >
-                        📍 View location
+                        ✨ Ask AI about this place
                     </button>
-
-                    <a
-                        class="btn btn-secondary"
-                        href="${place.council}"
-                        target="_blank"
-                        rel="noopener"
-                    >
-                        More information →
-                    </a>
 
                 </div>
 
-
-                <button
-                    class="ask-ai-button"
-                    type="button"
-                    onclick='askAI(${JSON.stringify(place.name)})'
-                >
-                    ✨ Ask AI about this place
-                </button>
-
             </article>
 
-        `
+            `
         )
         .join("");
 
 }
 
 
+/* =========================================================
+   POPUP CONTROLS
+   ========================================================= */
+
 function setupPopup() {
 
     const popup =
-        document.getElementById("locationPopup");
+        document.getElementById(
+            "locationPopup"
+        );
+
 
     const closeButton =
-        document.getElementById("closeLocationPopup");
+        document.getElementById(
+            "closeLocationPopup"
+        );
 
 
     closeButton?.addEventListener(
@@ -282,7 +330,9 @@ function setupPopup() {
         "click",
         event => {
 
-            if (event.target === popup) {
+            if (
+                event.target === popup
+            ) {
 
                 closeLocationPopup();
 
@@ -296,55 +346,206 @@ function setupPopup() {
 
 function closeLocationPopup() {
 
-    document
-        .getElementById("locationPopup")
-        ?.classList.remove("active");
+    const popup =
+        document.getElementById(
+            "locationPopup"
+        );
+
+
+    popup?.classList.remove(
+        "active"
+    );
 
 }
 
 
-function showLocation(index) {
+/* =========================================================
+   SHOW LOCATION
+   ========================================================= */
+
+async function showLocation(index) {
 
     const place =
         PLACES[index];
 
 
-    document
-        .getElementById("locationPopup")
-        ?.classList.add("active");
+    const popup =
+        document.getElementById(
+            "locationPopup"
+        );
 
 
-    document
-        .getElementById("popupPlaceName")
-        .textContent =
-            place.name;
+    const placeName =
+        document.getElementById(
+            "popupPlaceName"
+        );
 
 
-    document
-        .getElementById("popupDistance")
-        .textContent =
-            "Getting your location...";
+    const distanceText =
+        document.getElementById(
+            "popupDistance"
+        );
 
 
-    getUserLocation(
-        () => {
+    popup.classList.add(
+        "active"
+    );
 
-            const distance =
-                calculateDistance(
-                    userLocation.latitude,
-                    userLocation.longitude,
-                    place.lat,
-                    place.lon
+
+    placeName.textContent =
+        place.name;
+
+
+    distanceText.textContent =
+        "Getting your location...";
+
+
+    try {
+
+        const user =
+            await getUserLocation();
+
+
+        const distance =
+            calculateDistance(
+
+                user.latitude,
+                user.longitude,
+
+                place.lat,
+                place.lon
+
+            );
+
+
+        distanceText.textContent =
+            `${distance.toFixed(1)} km away from you`;
+
+
+        document
+            .getElementById(
+                "googleMapsLink"
+            )
+            .href =
+                `https://www.google.com/maps/dir/${user.latitude},${user.longitude}/${place.lat},${place.lon}`;
+
+
+        /*
+         * Wait for popup to become visible
+         * before Leaflet measures its size.
+         */
+
+        setTimeout(
+            () => {
+
+                openMap(
+                    user,
+                    place
                 );
 
+            },
+            250
+        );
 
-            document
-                .getElementById("popupDistance")
-                .textContent =
-                    `Approximately ${distance.toFixed(1)} km from your location.`;
+    }
+
+    catch (error) {
+
+        console.error(
+            "Location error:",
+            error
+        );
 
 
-            createMap(place);
+        distanceText.textContent =
+            "Location could not be accessed. Please allow location permission.";
+
+    }
+
+}
+
+
+/* =========================================================
+   USER GEOLOCATION
+   ========================================================= */
+
+function getUserLocation() {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            /*
+             * Reuse location if we already have it.
+             */
+
+            if (userLocation) {
+
+                resolve(
+                    userLocation
+                );
+
+                return;
+
+            }
+
+
+            if (
+                !navigator.geolocation
+            ) {
+
+                reject(
+                    new Error(
+                        "Geolocation is not supported."
+                    )
+                );
+
+                return;
+
+            }
+
+
+            navigator.geolocation.getCurrentPosition(
+
+                position => {
+
+                    userLocation = {
+
+                        latitude:
+                            position.coords.latitude,
+
+                        longitude:
+                            position.coords.longitude
+
+                    };
+
+
+                    resolve(
+                        userLocation
+                    );
+
+                },
+
+
+                error => {
+
+                    reject(
+                        error
+                    );
+
+                },
+
+
+                {
+
+                    enableHighAccuracy: true,
+
+                    timeout: 10000,
+
+                    maximumAge: 300000
+
+                }
+
+            );
 
         }
     );
@@ -352,140 +553,196 @@ function showLocation(index) {
 }
 
 
-function getUserLocation(callback) {
+/* =========================================================
+   LEAFLET MAP
+   ========================================================= */
 
-    if (userLocation) {
+function openMap(
+    user,
+    place
+) {
 
-        callback();
-        return;
+    /*
+     * Create the Leaflet map only once.
+     */
 
-    }
+    if (!destinationMap) {
 
-
-    if (!navigator.geolocation) {
-
-        userLocation = {
-            latitude: -36.8485,
-            longitude: 174.7633
-        };
-
-        callback();
-        return;
-
-    }
+        destinationMap =
+            L.map(
+                "destinationMap"
+            );
 
 
-    navigator.geolocation.getCurrentPosition(
+        L.tileLayer(
 
-        position => {
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
 
-            userLocation = {
+            {
 
-                latitude:
-                    position.coords.latitude,
+                attribution:
+                    "&copy; OpenStreetMap contributors"
 
-                longitude:
-                    position.coords.longitude
+            }
 
-            };
-
-            callback();
-
-        },
-
-
-        () => {
-
-            userLocation = {
-                latitude: -36.8485,
-                longitude: 174.7633
-            };
-
-            callback();
-
-        },
-
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000
-        }
-
-    );
-
-}
-
-
-function createMap(place) {
-
-    if (destinationMap) {
-
-        destinationMap.remove();
+        )
+        .addTo(
+            destinationMap
+        );
 
     }
 
 
-    destinationMap =
-        L.map("destinationMap");
+    /*
+     * Remove old markers.
+     */
+
+    if (userMarker) {
+
+        destinationMap.removeLayer(
+            userMarker
+        );
+
+    }
 
 
-    L.tileLayer(
+    if (placeMarker) {
 
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        destinationMap.removeLayer(
+            placeMarker
+        );
 
-        {
-            attribution:
-                "&copy; OpenStreetMap contributors"
-        }
-
-    ).addTo(destinationMap);
+    }
 
 
-    const user = [
-        userLocation.latitude,
-        userLocation.longitude
-    ];
+    /*
+     * Add current user marker.
+     */
+
+    userMarker =
+        L.marker(
+
+            [
+
+                user.latitude,
+
+                user.longitude
+
+            ]
+
+        )
+        .addTo(
+            destinationMap
+        )
+        .bindPopup(
+            "Your location"
+        );
 
 
-    const destination = [
-        place.lat,
-        place.lon
-    ];
+    /*
+     * Add destination marker.
+     */
+
+    placeMarker =
+        L.marker(
+
+            [
+
+                place.lat,
+
+                place.lon
+
+            ]
+
+        )
+        .addTo(
+            destinationMap
+        )
+        .bindPopup(
+            place.name
+        );
 
 
-    L.marker(user)
-        .addTo(destinationMap)
-        .bindPopup("Your location");
-
-
-    L.marker(destination)
-        .addTo(destinationMap)
-        .bindPopup(place.name);
-
+    /*
+     * Show both locations.
+     */
 
     const bounds =
         L.latLngBounds(
-            user,
-            destination
+
+            [
+
+                [
+
+                    user.latitude,
+
+                    user.longitude
+
+                ],
+
+                [
+
+                    place.lat,
+
+                    place.lon
+
+                ]
+
+            ]
+
         );
 
 
     destinationMap.fitBounds(
+
         bounds,
+
         {
-            padding: [50, 50]
+
+            padding:
+                [50, 50]
+
         }
+
     );
 
 
+    /*
+     * Important because the map exists
+     * inside a popup that was previously hidden.
+     */
+
     setTimeout(
-        () =>
-            destinationMap.invalidateSize(),
+
+        () => {
+
+            destinationMap.invalidateSize();
+
+            destinationMap.fitBounds(
+
+                bounds,
+
+                {
+
+                    padding:
+                        [50, 50]
+
+                }
+
+            );
+
+        },
+
         150
+
     );
 
 }
 
+
+/* =========================================================
+   DISTANCE CALCULATION
+   ========================================================= */
 
 function calculateDistance(
     lat1,
@@ -494,13 +751,21 @@ function calculateDistance(
     lon2
 ) {
 
-    const radius = 6371;
+    const earthRadius =
+        6371;
+
 
     const latitudeDifference =
-        degreesToRadians(lat2 - lat1);
+        degreesToRadians(
+            lat2 - lat1
+        );
+
 
     const longitudeDifference =
-        degreesToRadians(lon2 - lon1);
+        degreesToRadians(
+            lon2 - lon1
+        );
+
 
     const calculation =
 
@@ -511,13 +776,17 @@ function calculateDistance(
         +
 
         Math.cos(
-            degreesToRadians(lat1)
+            degreesToRadians(
+                lat1
+            )
         )
 
         *
 
         Math.cos(
-            degreesToRadians(lat2)
+            degreesToRadians(
+                lat2
+            )
         )
 
         *
@@ -527,34 +796,69 @@ function calculateDistance(
         ) ** 2;
 
 
-    return
-
-        radius
-
-        *
+    const centralAngle =
 
         2
 
         *
 
         Math.atan2(
-            Math.sqrt(calculation),
-            Math.sqrt(1 - calculation)
+
+            Math.sqrt(
+                calculation
+            ),
+
+            Math.sqrt(
+                1 - calculation
+            )
+
         );
 
+
+    return (
+
+        earthRadius
+
+        *
+
+        centralAngle
+
+    );
+
 }
 
 
-function degreesToRadians(degrees) {
+function degreesToRadians(
+    degrees
+) {
 
-    return degrees * Math.PI / 180;
+    return (
+
+        degrees
+
+        *
+
+        Math.PI
+
+        /
+
+        180
+
+    );
 
 }
 
 
-function askAI(placeName) {
+/* =========================================================
+   ASK AI
+   ========================================================= */
+
+function askAI(
+    placeName
+) {
 
     window.location.href =
+
         `chat.html?place=${encodeURIComponent(
             placeName
         )}`;
