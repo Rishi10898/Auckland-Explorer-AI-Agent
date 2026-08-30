@@ -1,12 +1,6 @@
 /*
  * Auckland Explorer
  * Parks destination page.
- *
- * Responsibilities:
- * - Store static park information.
- * - Generate destination cards.
- * - Request the user's location.
- * - Display destination distance on a popup map.
  */
 
 
@@ -21,20 +15,14 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8606,
         lon: 174.7785,
-        image:
-            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-
+        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
         points: [
             "One of Auckland's largest and oldest parks.",
             "Home to walking areas and open green spaces.",
             "Close to Auckland Museum and the city centre."
         ],
-
-        info:
-            "A large central Auckland park combining gardens, open spaces and cultural attractions.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "A large central Auckland park combining gardens, open spaces and cultural attractions.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -42,20 +30,14 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8984,
         lon: 174.7848,
-        image:
-            "https://images.unsplash.com/photo-1472396961693-142e6e269027",
-
+        image: "https://images.unsplash.com/photo-1472396961693-142e6e269027",
         points: [
             "Large open green spaces.",
             "Views towards One Tree Hill.",
             "Popular for walking and picnics."
         ],
-
-        info:
-            "Cornwall Park is a major Auckland green space with walking areas and views.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Cornwall Park is a major Auckland green space with walking areas and views.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -63,20 +45,14 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8627,
         lon: 174.7287,
-        image:
-            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-
+        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
         points: [
             "Peaceful lakeside environment.",
             "Popular walking routes.",
             "Close to Auckland Zoo and MOTAT."
         ],
-
-        info:
-            "Western Springs is a central Auckland park known for its lake and walking environment.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Western Springs is a central Auckland park known for its lake and walking environment.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -84,20 +60,14 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8506,
         lon: 174.7678,
-        image:
-            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-
+        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
         points: [
             "Historic park near Auckland CBD.",
             "Convenient central location.",
             "Good for a short city walk."
         ],
-
-        info:
-            "Albert Park is a historic green space close to Auckland's city centre.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Albert Park is a historic green space close to Auckland's city centre.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -105,20 +75,14 @@ const PLACES = [
         region: "North Auckland",
         lat: -36.6767,
         lon: 174.7467,
-        image:
-            "https://images.unsplash.com/photo-1473448912268-2022ce9509d8",
-
+        image: "https://images.unsplash.com/photo-1473448912268-2022ce9509d8",
         points: [
             "Large coastal recreation area.",
             "Walking and picnic opportunities.",
             "Beach and green space combined."
         ],
-
-        info:
-            "Long Bay Regional Park combines coastal scenery with open recreational areas.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Long Bay Regional Park combines coastal scenery with open recreational areas.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -126,20 +90,14 @@ const PLACES = [
         region: "South Auckland",
         lat: -36.9266,
         lon: 174.7556,
-        image:
-            "https://images.unsplash.com/photo-1472396961693-142e6e269027",
-
+        image: "https://images.unsplash.com/photo-1472396961693-142e6e269027",
         points: [
             "Large coastal regional park.",
             "Walking and open spaces.",
             "Views across the Manukau Harbour."
         ],
-
-        info:
-            "Ambury Regional Park provides open countryside and coastal walking opportunities.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Ambury Regional Park provides open countryside and coastal walking opportunities.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -147,20 +105,14 @@ const PLACES = [
         region: "North Auckland",
         lat: -36.7000,
         lon: 174.8500,
-        image:
-            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
-
+        image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
         points: [
             "Coastal scenery and walking tracks.",
             "Large open natural environment.",
             "Views across the Hauraki Gulf."
         ],
-
-        info:
-            "Shakespear Regional Park is a coastal destination with natural landscapes and walking tracks.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Shakespear Regional Park is a coastal destination with natural landscapes and walking tracks.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -168,20 +120,14 @@ const PLACES = [
         region: "West Auckland",
         lat: -36.9500,
         lon: 174.5000,
-        image:
-            "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
-
+        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
         points: [
             "Native forest landscapes.",
             "Major walking and nature area.",
             "Close to Auckland's west coast."
         ],
-
-        info:
-            "The Waitākere area provides access to some of Auckland's most significant natural landscapes.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "The Waitākere area provides access to some of Auckland's most significant natural landscapes.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -189,20 +135,14 @@ const PLACES = [
         region: "South Auckland",
         lat: -36.9980,
         lon: 174.7860,
-        image:
-            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
-
+        image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
         points: [
             "Historic and cultural landscape.",
             "Open walking environment.",
             "Unique volcanic features."
         ],
-
-        info:
-            "Ōtuataua Stonefields is an important Auckland landscape with natural and historical significance.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Ōtuataua Stonefields is an important Auckland landscape with natural and historical significance.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     },
 
     {
@@ -210,51 +150,33 @@ const PLACES = [
         region: "North Auckland",
         lat: -36.3680,
         lon: 174.8230,
-        image:
-            "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
-
+        image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
         points: [
             "Large natural coastal environment.",
             "Walking and outdoor recreation.",
             "Combination of beach and park landscapes."
         ],
-
-        info:
-            "Tāwharanui is a major regional park combining natural coastal scenery and outdoor recreation.",
-
-        council:
-            "https://www.aucklandcouncil.govt.nz/"
+        info: "Tāwharanui is a major regional park combining natural coastal scenery and outdoor recreation.",
+        council: "https://www.aucklandcouncil.govt.nz/"
     }
 
 ];
-/* =========================================================
-   APPLICATION STATE
-   ========================================================= */
+
 
 let userLocation = null;
-
 let destinationMap = null;
 
-
-/* =========================================================
-   PAGE STARTUP
-   ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
     () => {
 
         renderPlaces();
-
         setupPopup();
 
     }
 );
 
-
-/* =========================================================
-   RENDER CARDS
-   ========================================================= */
 
 function renderPlaces() {
 
@@ -274,6 +196,7 @@ function renderPlaces() {
                     class="place-image"
                     src="${place.image}"
                     alt="${place.name}"
+                    loading="lazy"
                 >
 
                 <p class="place-region">
@@ -283,6 +206,10 @@ function renderPlaces() {
                 <h2>
                     ${place.name}
                 </h2>
+
+                <p class="place-description">
+                    ${place.info}
+                </p>
 
                 <ul class="place-points">
 
@@ -296,10 +223,12 @@ function renderPlaces() {
 
                 </ul>
 
+
                 <div class="place-actions">
 
                     <button
                         class="btn btn-secondary"
+                        type="button"
                         onclick="showLocation(${index})"
                     >
                         📍 View location
@@ -316,6 +245,15 @@ function renderPlaces() {
 
                 </div>
 
+
+                <button
+                    class="ask-ai-button"
+                    type="button"
+                    onclick='askAI(${JSON.stringify(place.name)})'
+                >
+                    ✨ Ask AI about this place
+                </button>
+
             </article>
 
         `
@@ -324,10 +262,6 @@ function renderPlaces() {
 
 }
 
-
-/* =========================================================
-   POPUP SETUP
-   ========================================================= */
 
 function setupPopup() {
 
@@ -369,10 +303,6 @@ function closeLocationPopup() {
 }
 
 
-/* =========================================================
-   SHOW DESTINATION LOCATION
-   ========================================================= */
-
 function showLocation(index) {
 
     const place =
@@ -388,6 +318,12 @@ function showLocation(index) {
         .getElementById("popupPlaceName")
         .textContent =
             place.name;
+
+
+    document
+        .getElementById("popupDistance")
+        .textContent =
+            "Getting your location...";
 
 
     getUserLocation(
@@ -416,16 +352,11 @@ function showLocation(index) {
 }
 
 
-/* =========================================================
-   USER GEOLOCATION
-   ========================================================= */
-
 function getUserLocation(callback) {
 
     if (userLocation) {
 
         callback();
-
         return;
 
     }
@@ -439,7 +370,6 @@ function getUserLocation(callback) {
         };
 
         callback();
-
         return;
 
     }
@@ -473,16 +403,18 @@ function getUserLocation(callback) {
 
             callback();
 
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
         }
 
     );
 
 }
 
-
-/* =========================================================
-   CREATE MAP
-   ========================================================= */
 
 function createMap(place) {
 
@@ -498,26 +430,27 @@ function createMap(place) {
 
 
     L.tileLayer(
+
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+
         {
             attribution:
                 "&copy; OpenStreetMap contributors"
         }
+
     ).addTo(destinationMap);
 
 
-    const user =
-        [
-            userLocation.latitude,
-            userLocation.longitude
-        ];
+    const user = [
+        userLocation.latitude,
+        userLocation.longitude
+    ];
 
 
-    const destination =
-        [
-            place.lat,
-            place.lon
-        ];
+    const destination = [
+        place.lat,
+        place.lon
+    ];
 
 
     L.marker(user)
@@ -546,20 +479,13 @@ function createMap(place) {
 
 
     setTimeout(
-        () => {
-
-            destinationMap.invalidateSize();
-
-        },
-        100
+        () =>
+            destinationMap.invalidateSize(),
+        150
     );
 
 }
 
-
-/* =========================================================
-   DISTANCE CALCULATION
-   ========================================================= */
 
 function calculateDistance(
     lat1,
@@ -568,21 +494,13 @@ function calculateDistance(
     lon2
 ) {
 
-    const radius =
-        6371;
-
+    const radius = 6371;
 
     const latitudeDifference =
-        degreesToRadians(
-            lat2 - lat1
-        );
-
+        degreesToRadians(lat2 - lat1);
 
     const longitudeDifference =
-        degreesToRadians(
-            lon2 - lon1
-        );
-
+        degreesToRadians(lon2 - lon1);
 
     const calculation =
 
@@ -627,10 +545,18 @@ function calculateDistance(
 }
 
 
-function degreesToRadians(
-    degrees
-) {
+function degreesToRadians(degrees) {
 
     return degrees * Math.PI / 180;
+
+}
+
+
+function askAI(placeName) {
+
+    window.location.href =
+        `chat.html?place=${encodeURIComponent(
+            placeName
+        )}`;
 
 }

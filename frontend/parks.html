@@ -2,19 +2,26 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1">
+        content="width=device-width,initial-scale=1"
+    >
 
-    <title>Auckland Parks</title>
+    <title>Parks · Auckland Explorer</title>
 
     <link
         rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
 
-    <link rel="stylesheet" href="styles.css">
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
+
 </head>
 
 
@@ -22,15 +29,32 @@
 
 <nav class="nav">
 
-    <a class="brand" href="index.html">
+    <a
+        class="brand"
+        href="index.html"
+    >
         🌊 Auckland Explorer
     </a>
 
+
     <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="explore.html">Explore</a>
-        <a href="chat.html">AI Explorer</a>
-        <a href="contact.html">Contact</a>
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="explore.html">
+            Explore
+        </a>
+
+        <a href="chat.html">
+            AI Explorer
+        </a>
+
+        <a href="contact.html">
+            Contact
+        </a>
+
     </div>
 
 </nav>
@@ -38,72 +62,105 @@
 
 <main class="container">
 
-    <!-- PAGE INTRODUCTION -->
-    <section class="section places-hero">
-        <h1>
-            <span class="gradient-text">
-                Auckland Parks
-            </span>
-        </h1>
+    <section class="section">
 
-        <p class="places-intro">
-            Discover some of Auckland's most popular parks,
-            compare destinations and explore where they are
-            relative to your location.
-        </p>
-
-
-    <!-- BEACH CARDS -->
         <div class="section-title">
 
-            <h2>
-                Choose where you want to explore
-            </h2>
+            <p>
+                GREEN SPACES OF TĀMAKI MAKAURAU
+            </p>
+
+            <h1>
+                Explore Auckland
+                <span class="gradient-text">
+                    parks.
+                </span>
+            </h1>
 
             <p>
-                Select a destination to learn more,
-                check its distance or ask the AI Explorer
-                for personalised recommendations.
+                Discover green spaces, regional parks,
+                walking areas and some of Auckland's most
+                significant natural landscapes.
             </p>
 
         </div>
 
 
-        <!-- JavaScript inserts the 10 cards here -->
         <div
+            id="placesGrid"
             class="places-grid"
-            id="placesGrid">
-
+        >
         </div>
-</main>
-<!-- Location map popup -->
-<div id="locationPopup" class="location-popup">
 
-    <div class="location-popup-content">
+    </section>
+
+</main>
+
+
+<div
+    id="locationPopup"
+    class="location-popup"
+>
+
+    <div class="location-popup-card">
 
         <button
             id="closeLocationPopup"
-            class="map-close-button"
+            class="location-popup-close"
             type="button"
+            aria-label="Close location map"
         >
             ×
         </button>
 
-        <h2 id="popupPlaceName"></h2>
 
-        <p id="popupDistance"></p>
+        <p>
+            LOCATION
+        </p>
 
-        <div id="destinationMap"></div>
+
+        <h2
+            id="popupPlaceName"
+        >
+            Destination
+        </h2>
+
+
+        <p
+            id="popupDistance"
+            class="popup-distance"
+        >
+            Getting your location...
+        </p>
+
+
+        <div
+            id="destinationMap"
+        >
+        </div>
+
+
+        <p class="map-note">
+            Distance shown is approximate straight-line distance.
+        </p>
 
     </div>
 
 </div>
+
+
 <footer class="footer">
-
     Auckland Explorer · Tāmaki Makaurau
-
 </footer>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+>
+</script>
+
 <script src="parks.js"></script>
+
 </body>
+
 </html>

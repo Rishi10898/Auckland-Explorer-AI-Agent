@@ -1,166 +1,253 @@
 /*
  * Auckland Explorer
- * Static destination database.
+ * Beaches destination page.
  *
- * Keeping destination data separate from application logic
- * makes the program easier to maintain and expand.
+ * Responsibilities:
+ * - Store static beach information.
+ * - Generate destination cards.
+ * - Request the user's location.
+ * - Display destination distance on a popup map.
  */
 
-const PLACES = {
 
-    beaches: [
-        {
-            name: "Piha Beach",
-            region: "West Auckland",
-            lat: -36.9530,
-            lon: 174.4680,
-            image: "https://www.newzealand.com/assets/Tourism-NZ/Auckland/img-1536201939-3159-8823-717CA83C-0811-08A9-5BCA19BBB934D606__ExtRewriteWyJqcGciLCJ3ZWJwIl0_aWxvdmVrZWxseQo_FocalPointCropWzExMDAsMzIwMCw0MCw2Niw3NSwid2VicCIsNjUsMi41XQ.webp",
-            points: [
-                "Iconic black-sand west coast beach.",
-                "Popular for coastal scenery and surfing.",
-                "Great base for exploring the Waitākere coast."
-            ],
-            info: "Piha is one of Auckland's best-known west coast beaches, surrounded by dramatic coastal scenery.",
-            council_1: "https://www.aucklandcouncil.govt.nz/",
-            council_2 : "https://www.newzealand.com/us/piha/"
-        },
+/* =========================================================
+   BEACH DATA
+   ========================================================= */
 
-        {
-            name: "Muriwai Beach",
-            region: "West Auckland",
-            lat: -36.8320,
-            lon: 174.4430,
-            image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAIDorfNLW-ik365DmCJfYGJ7TN3Obxxk7anBNxpahtA&s=10",
-            points: [
-                "Spectacular black-sand coastline.",
-                "Known for dramatic cliffs and coastal views.",
-                "Gateway to Muriwai Regional Park."
-            ],
-            info: "Muriwai is a rugged west coast destination with black-sand beaches, trails and coastal viewpoints.",
-            council: "https://www.aucklandcouncil.govt.nz/en/parks-recreation/find-park-beach/park-detail/220.html"
-        },
+const PLACES = [
 
-        {
-            name: "Mission Bay",
-            region: "Central Auckland",
-            lat: -36.8485,
-            lon: 174.8300,
-            image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
-            points: [
-                "Easy-to-reach waterfront destination.",
-                "Views across the Waitematā Harbour.",
-                "Close to cafes, restaurants and shops."
-            ],
-            info: "Mission Bay is a popular Auckland waterfront destination close to the city centre.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        },
+    {
+        name: "Piha Beach",
+        region: "West Auckland",
+        lat: -36.9530,
+        lon: 174.4680,
 
-        {
-            name: "Takapuna Beach",
-            region: "North Shore",
-            lat: -36.7870,
-            lon: 174.7730,
-            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-            points: [
-                "Wide beach on Auckland's North Shore.",
-                "Views towards Rangitoto Island.",
-                "Close to Takapuna shops and cafes."
-            ],
-            info: "Takapuna Beach combines a large urban beach with views across the Hauraki Gulf.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        },
+        image:
+            "https://www.newzealand.com/assets/Tourism-NZ/Auckland/img-1536201939-3159-8823-717CA83C-0811-08A9-5BCA19BBB934D606__ExtRewriteWyJqcGciLCJ3ZWJwIl0_aWxvdmVrZWxseQo_FocalPointCropWzExMDAsMzIwMCw0MCw2Niw3NSwid2VicCIsNjUsMi41XQ.webp",
 
-        {
-            name: "Long Bay",
-            region: "North Auckland",
-            lat: -36.6780,
-            lon: 174.7490,
-            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-            points: [
-                "Large sandy beach.",
-                "Popular for walking and recreation.",
-                "Part of Long Bay Regional Park."
-            ],
-            info: "Long Bay provides a large coastal recreation area north of Auckland.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        },
+        points: [
+            "Iconic black-sand west coast beach.",
+            "Popular for coastal scenery and surfing.",
+            "Great base for exploring the Waitākere coast."
+        ],
 
-        {
-            name: "Karekare Beach",
-            region: "West Auckland",
-            lat: -36.9990,
-            lon: 174.5520,
-            image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
-            points: [
-                "Dramatic west coast landscape.",
-                "Black-sand beach and surrounding bush.",
-                "A quieter alternative to Piha."
-            ],
-            info: "Karekare is a dramatic west coast destination within the Waitākere Ranges.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        },
+        info:
+            "Piha is one of Auckland's best-known west coast beaches, surrounded by dramatic coastal scenery.",
 
-        {
-            name: "Bethells Beach",
-            region: "West Auckland",
-            lat: -36.8580,
-            lon: 174.4650,
-            image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
-            points: [
-                "Beautiful black-sand beach.",
-                "Strong west coast scenery.",
-                "Popular for walks and coastal exploration."
-            ],
-            info: "Bethells Beach is a scenic west coast destination surrounded by native landscape.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        },
+        council:
+            "https://www.newzealand.com/us/piha/"
+    },
 
-        {
-            name: "Orewa Beach",
-            region: "North Auckland",
-            lat: -36.5860,
-            lon: 174.6890,
-            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-            points: [
-                "Long sandy coastline.",
-                "Popular for walking and cycling.",
-                "Close to Orewa town centre."
-            ],
-            info: "Orewa Beach provides an accessible coastal destination north of Auckland.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        },
 
-        {
-            name: "Cornwallis Beach",
-            region: "West Auckland",
-            lat: -36.9970,
-            lon: 174.6350,
-            image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
-            points: [
-                "Sheltered Manukau Harbour setting.",
-                "Good for picnics and swimming.",
-                "Historic Cornwallis Wharf nearby."
-            ],
-            info: "Cornwallis is a popular family-oriented spot on the Manukau Harbour.",
-            council: "https://www.aucklandcouncil.govt.nz/en/parks-recreation/find-park-beach/park-detail/210.html"
-        },
+    {
+        name: "Muriwai Beach",
+        region: "West Auckland",
+        lat: -36.8320,
+        lon: 174.4430,
 
-        {
-            name: "Maraetai Beach",
-            region: "East Auckland",
-            lat: -36.8850,
-            lon: 175.0400,
-            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-            points: [
-                "Eastern Auckland coastal destination.",
-                "Views across the Hauraki Gulf.",
-                "Popular for relaxed waterfront visits."
-            ],
-            info: "Maraetai is a coastal destination in east Auckland with views across the Hauraki Gulf.",
-            council: "https://www.aucklandcouncil.govt.nz/"
-        }
-    ]
-};
+        image:
+            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+
+        points: [
+            "Spectacular black-sand coastline.",
+            "Known for dramatic cliffs and coastal views.",
+            "Gateway to Muriwai Regional Park."
+        ],
+
+        info:
+            "Muriwai is a rugged west coast destination with black-sand beaches, trails and coastal viewpoints.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/en/parks-recreation/find-park-beach/park-detail/220.html"
+    },
+
+
+    {
+        name: "Mission Bay",
+        region: "Central Auckland",
+        lat: -36.8485,
+        lon: 174.8300,
+
+        image:
+            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+
+        points: [
+            "Easy-to-reach waterfront destination.",
+            "Views across the Waitematā Harbour.",
+            "Close to cafes, restaurants and shops."
+        ],
+
+        info:
+            "Mission Bay is a popular Auckland waterfront destination close to the city centre.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    },
+
+
+    {
+        name: "Takapuna Beach",
+        region: "North Shore",
+        lat: -36.7870,
+        lon: 174.7730,
+
+        image:
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+
+        points: [
+            "Wide beach on Auckland's North Shore.",
+            "Views towards Rangitoto Island.",
+            "Close to Takapuna shops and cafes."
+        ],
+
+        info:
+            "Takapuna Beach combines a large urban beach with views across the Hauraki Gulf.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    },
+
+
+    {
+        name: "Long Bay",
+        region: "North Auckland",
+        lat: -36.6780,
+        lon: 174.7490,
+
+        image:
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+
+        points: [
+            "Large sandy beach.",
+            "Popular for walking and recreation.",
+            "Part of Long Bay Regional Park."
+        ],
+
+        info:
+            "Long Bay provides a large coastal recreation area north of Auckland.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    },
+
+
+    {
+        name: "Karekare Beach",
+        region: "West Auckland",
+        lat: -36.9990,
+        lon: 174.5520,
+
+        image:
+            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+
+        points: [
+            "Dramatic west coast landscape.",
+            "Black-sand beach and surrounding bush.",
+            "A quieter alternative to Piha."
+        ],
+
+        info:
+            "Karekare is a dramatic west coast destination within the Waitākere Ranges.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    },
+
+
+    {
+        name: "Bethells Beach",
+        region: "West Auckland",
+        lat: -36.8580,
+        lon: 174.4650,
+
+        image:
+            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+
+        points: [
+            "Beautiful black-sand beach.",
+            "Strong west coast scenery.",
+            "Popular for walks and coastal exploration."
+        ],
+
+        info:
+            "Bethells Beach is a scenic west coast destination surrounded by native landscape.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    },
+
+
+    {
+        name: "Orewa Beach",
+        region: "North Auckland",
+        lat: -36.5860,
+        lon: 174.6890,
+
+        image:
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+
+        points: [
+            "Long sandy coastline.",
+            "Popular for walking and cycling.",
+            "Close to Orewa town centre."
+        ],
+
+        info:
+            "Orewa Beach provides an accessible coastal destination north of Auckland.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    },
+
+
+    {
+        name: "Cornwallis Beach",
+        region: "West Auckland",
+        lat: -36.9970,
+        lon: 174.6350,
+
+        image:
+            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+
+        points: [
+            "Sheltered Manukau Harbour setting.",
+            "Good for picnics and swimming.",
+            "Historic Cornwallis Wharf nearby."
+        ],
+
+        info:
+            "Cornwallis is a popular family-oriented spot on the Manukau Harbour.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/en/parks-recreation/find-park-beach/park-detail/210.html"
+    },
+
+
+    {
+        name: "Maraetai Beach",
+        region: "East Auckland",
+        lat: -36.8850,
+        lon: 175.0400,
+
+        image:
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+
+        points: [
+            "Eastern Auckland coastal destination.",
+            "Views across the Hauraki Gulf.",
+            "Popular for relaxed waterfront visits."
+        ],
+
+        info:
+            "Maraetai is a coastal destination in east Auckland with views across the Hauraki Gulf.",
+
+        council:
+            "https://www.aucklandcouncil.govt.nz/"
+    }
+
+];
+
+
 /* =========================================================
    APPLICATION STATE
    ========================================================= */
@@ -208,6 +295,7 @@ function renderPlaces() {
                     class="place-image"
                     src="${place.image}"
                     alt="${place.name}"
+                    loading="lazy"
                 >
 
                 <p class="place-region">
@@ -217,6 +305,10 @@ function renderPlaces() {
                 <h2>
                     ${place.name}
                 </h2>
+
+                <p class="place-description">
+                    ${place.info}
+                </p>
 
                 <ul class="place-points">
 
@@ -230,14 +322,17 @@ function renderPlaces() {
 
                 </ul>
 
+
                 <div class="place-actions">
 
                     <button
                         class="btn btn-secondary"
+                        type="button"
                         onclick="showLocation(${index})"
                     >
                         📍 View location
                     </button>
+
 
                     <a
                         class="btn btn-secondary"
@@ -249,6 +344,15 @@ function renderPlaces() {
                     </a>
 
                 </div>
+
+
+                <button
+                    class="ask-ai-button"
+                    type="button"
+                    onclick='askAI(${JSON.stringify(place.name)})'
+                >
+                    ✨ Ask AI about this place
+                </button>
 
             </article>
 
@@ -269,7 +373,9 @@ function setupPopup() {
         document.getElementById("locationPopup");
 
     const closeButton =
-        document.getElementById("closeLocationPopup");
+        document.getElementById(
+            "closeLocationPopup"
+        );
 
 
     closeButton?.addEventListener(
@@ -282,7 +388,9 @@ function setupPopup() {
         "click",
         event => {
 
-            if (event.target === popup) {
+            if (
+                event.target === popup
+            ) {
 
                 closeLocationPopup();
 
@@ -297,8 +405,12 @@ function setupPopup() {
 function closeLocationPopup() {
 
     document
-        .getElementById("locationPopup")
-        ?.classList.remove("active");
+        .getElementById(
+            "locationPopup"
+        )
+        ?.classList.remove(
+            "active"
+        );
 
 }
 
@@ -314,14 +426,28 @@ function showLocation(index) {
 
 
     document
-        .getElementById("locationPopup")
-        ?.classList.add("active");
+        .getElementById(
+            "locationPopup"
+        )
+        ?.classList.add(
+            "active"
+        );
 
 
     document
-        .getElementById("popupPlaceName")
+        .getElementById(
+            "popupPlaceName"
+        )
         .textContent =
             place.name;
+
+
+    document
+        .getElementById(
+            "popupDistance"
+        )
+        .textContent =
+            "Getting your location...";
 
 
     getUserLocation(
@@ -329,15 +455,20 @@ function showLocation(index) {
 
             const distance =
                 calculateDistance(
+
                     userLocation.latitude,
                     userLocation.longitude,
+
                     place.lat,
                     place.lon
+
                 );
 
 
             document
-                .getElementById("popupDistance")
+                .getElementById(
+                    "popupDistance"
+                )
                 .textContent =
                     `Approximately ${distance.toFixed(1)} km from your location.`;
 
@@ -407,6 +538,13 @@ function getUserLocation(callback) {
 
             callback();
 
+        },
+
+
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
         }
 
     );
@@ -428,40 +566,55 @@ function createMap(place) {
 
 
     destinationMap =
-        L.map("destinationMap");
+        L.map(
+            "destinationMap"
+        );
 
 
     L.tileLayer(
+
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+
         {
             attribution:
                 "&copy; OpenStreetMap contributors"
         }
-    ).addTo(destinationMap);
+
+    ).addTo(
+        destinationMap
+    );
 
 
-    const user =
-        [
-            userLocation.latitude,
-            userLocation.longitude
-        ];
+    const user = [
+
+        userLocation.latitude,
+
+        userLocation.longitude
+
+    ];
 
 
-    const destination =
-        [
-            place.lat,
-            place.lon
-        ];
+    const destination = [
+
+        place.lat,
+
+        place.lon
+
+    ];
 
 
     L.marker(user)
         .addTo(destinationMap)
-        .bindPopup("Your location");
+        .bindPopup(
+            "Your location"
+        );
 
 
     L.marker(destination)
         .addTo(destinationMap)
-        .bindPopup(place.name);
+        .bindPopup(
+            place.name
+        );
 
 
     const bounds =
@@ -485,7 +638,7 @@ function createMap(place) {
             destinationMap.invalidateSize();
 
         },
-        100
+        150
     );
 
 }
@@ -554,8 +707,13 @@ function calculateDistance(
         *
 
         Math.atan2(
+
             Math.sqrt(calculation),
-            Math.sqrt(1 - calculation)
+
+            Math.sqrt(
+                1 - calculation
+            )
+
         );
 
 }
@@ -565,6 +723,22 @@ function degreesToRadians(
     degrees
 ) {
 
-    return degrees * Math.PI / 180;
+    return (
+        degrees * Math.PI / 180
+    );
+
+}
+
+
+/* =========================================================
+   ASK AI
+   ========================================================= */
+
+function askAI(placeName) {
+
+    window.location.href =
+        `chat.html?place=${encodeURIComponent(
+            placeName
+        )}`;
 
 }
