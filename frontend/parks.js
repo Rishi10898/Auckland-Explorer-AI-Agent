@@ -15,7 +15,7 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8606,
         lon: 174.7785,
-        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRm1B2U8AQ_eUK8ftDxcnwZEpH0BJf6M_r55G30vMzIGQ&s=10",
         points: [
             "One of Auckland's largest and oldest parks.",
             "Home to walking areas and open green spaces.",
@@ -30,7 +30,7 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8984,
         lon: 174.7848,
-        image: "https://images.unsplash.com/photo-1472396961693-142e6e269027",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0sOib3-7hZL4PjHgJCET6irk003VzNBbTAl5iuq4fog&s=10",
         points: [
             "Large open green spaces.",
             "Views towards One Tree Hill.",
@@ -41,11 +41,11 @@ const PLACES = [
     },
 
     {
-        name: "Western Springs",
+        name: "Western Springs Lakeside Park",
         region: "Central Auckland",
         lat: -36.8627,
         lon: 174.7287,
-        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi8BFL59e0NuMssnbogGeYOGih4wfQLnoryk8Wa_C-jQ&s=10",
         points: [
             "Peaceful lakeside environment.",
             "Popular walking routes.",
@@ -60,7 +60,7 @@ const PLACES = [
         region: "Central Auckland",
         lat: -36.8506,
         lon: 174.7678,
-        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFSBrjWWlN0t6LwtfV387ELnaR0yE_IszyStHeMNj0RA&s=10",
         points: [
             "Historic park near Auckland CBD.",
             "Convenient central location.",
@@ -75,7 +75,7 @@ const PLACES = [
         region: "North Auckland",
         lat: -36.6767,
         lon: 174.7467,
-        image: "https://images.unsplash.com/photo-1473448912268-2022ce9509d8",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3ZAWDTFAQHi066co6Myqv08w00JWLbLojasSvnYRNHg&s=10",
         points: [
             "Large coastal recreation area.",
             "Walking and picnic opportunities.",
@@ -90,7 +90,7 @@ const PLACES = [
         region: "South Auckland",
         lat: -36.9266,
         lon: 174.7556,
-        image: "https://images.unsplash.com/photo-1472396961693-142e6e269027",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPt6FHBvANq1kGj__3KnQGh72MEYak1Yx7URmdmr3oCw&s=10",
         points: [
             "Large coastal regional park.",
             "Walking and open spaces.",
@@ -105,7 +105,7 @@ const PLACES = [
         region: "North Auckland",
         lat: -36.7000,
         lon: 174.8500,
-        image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEh8vHeYCIBa7fjy9mym7npEo5uOWckG0PeP3ScW8saQ&s=10",
         points: [
             "Coastal scenery and walking tracks.",
             "Large open natural environment.",
@@ -116,11 +116,11 @@ const PLACES = [
     },
 
     {
-        name: "Waitākere Ranges",
+        name: "Waitākere Ranges Regional Park",
         region: "West Auckland",
         lat: -36.9500,
         lon: 174.5000,
-        image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTV-UJc7RnSBZDF77JUwskks4Y9NBc0u0m2LoRunXVPnA&s=10",
         points: [
             "Native forest landscapes.",
             "Major walking and nature area.",
@@ -131,11 +131,11 @@ const PLACES = [
     },
 
     {
-        name: "Ōtuataua Stonefields",
+        name: "Ōtuataua Stonefields Reserve",
         region: "South Auckland",
         lat: -36.9980,
         lon: 174.7860,
-        image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFDNY3Aacd9QrZ88TgDomI95PuKtWPCKa7jdOjTLzpwQ&s=10",
         points: [
             "Historic and cultural landscape.",
             "Open walking environment.",
@@ -150,7 +150,7 @@ const PLACES = [
         region: "North Auckland",
         lat: -36.3680,
         lon: 174.8230,
-        image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTOBdvsZCFhyelTyqAVhy4OnCvrJJ1xx8NpoqU8EG5ewQ&s=10",
         points: [
             "Large natural coastal environment.",
             "Walking and outdoor recreation.",
