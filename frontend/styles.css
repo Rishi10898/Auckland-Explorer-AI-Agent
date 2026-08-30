@@ -273,3 +273,247 @@ textarea {
     .hero { min-height: 70vh; }
     .message { max-width: 94%; }
 }
+/* ============================================================
+   DESTINATION CARDS
+   ============================================================ */
+
+.places-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(280px, 1fr)
+        );
+    gap: 22px;
+}
+
+
+.place-card {
+    overflow: hidden;
+    border-radius: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(18px);
+    transition: .3s;
+}
+
+
+.place-card:hover {
+    transform: translateY(-6px);
+    border-color:
+        rgba(34, 211, 238, .4);
+
+    box-shadow:
+        0 25px 70px
+        rgba(0, 0, 0, .3);
+}
+
+
+.place-content {
+    padding: 22px;
+}
+
+
+.place-region {
+    color: var(--cyan);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+
+.place-description {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+
+.place-points {
+    padding-left: 18px;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+
+.place-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+
+/* Small circular location button */
+
+.location-circle {
+    width: 48px;
+    height: 48px;
+
+    border: 1px solid
+        rgba(34, 211, 238, .35);
+
+    border-radius: 50%;
+
+    background:
+        rgba(34, 211, 238, .08);
+
+    color:
+        var(--cyan);
+
+    cursor: pointer;
+
+    font-size: 1.15rem;
+
+    transition: .25s;
+}
+
+
+.location-circle:hover {
+    transform: scale(1.08);
+
+    background:
+        rgba(34, 211, 238, .18);
+
+    box-shadow:
+        0 0 25px
+        rgba(34, 211, 238, .25);
+}
+
+
+.ask-ai-button {
+    width: 100%;
+    margin-top: 15px;
+    padding: 13px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    color: var(--text);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(34, 211, 238, .12),
+            rgba(139, 92, 246, .15)
+        );
+
+    cursor: pointer;
+    transition: .25s;
+}
+
+
+.ask-ai-button:hover {
+    transform: translateY(-2px);
+    border-color:
+        rgba(139, 92, 246, .5);
+}
+
+
+/* ============================================================
+   LOCATION POPUP
+   ============================================================ */
+
+.location-modal {
+    position: fixed;
+
+    inset: 0;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(2, 6, 23, .8);
+
+    backdrop-filter:
+        blur(10px);
+
+    z-index: 100;
+}
+
+
+.location-modal.open {
+    display: flex;
+}
+
+
+.location-modal-panel {
+    position: relative;
+
+    width:
+        min(850px, 96vw);
+
+    max-height:
+        90vh;
+
+    overflow: auto;
+
+    padding: 28px;
+
+    border-radius: 26px;
+
+    background:
+        #0f172a;
+
+    border:
+        1px solid
+        var(--border);
+
+    box-shadow:
+        0 30px 100px
+        rgba(0, 0, 0, .55);
+}
+
+
+.modal-close {
+    position: absolute;
+
+    top: 15px;
+    right: 18px;
+
+    width: 38px;
+    height: 38px;
+
+    border: none;
+    border-radius: 50%;
+
+    background:
+        rgba(255, 255, 255, .08);
+
+    color: white;
+
+    font-size: 1.5rem;
+
+    cursor: pointer;
+}
+
+
+.modal-heading {
+    margin-bottom: 18px;
+}
+
+
+.modal-heading p {
+    color:
+        var(--muted);
+}
+
+
+#destinationMap {
+    width: 100%;
+    height: 420px;
+
+    border-radius: 18px;
+
+    overflow: hidden;
+}
+
+
+.map-actions {
+    margin-top: 18px;
+}

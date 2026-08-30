@@ -14,14 +14,15 @@ const PLACES = {
             region: "West Auckland",
             lat: -36.9530,
             lon: 174.4680,
-            image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+            image: "https://www.newzealand.com/assets/Tourism-NZ/Auckland/img-1536201939-3159-8823-717CA83C-0811-08A9-5BCA19BBB934D606__ExtRewriteWyJqcGciLCJ3ZWJwIl0_aWxvdmVrZWxseQo_FocalPointCropWzExMDAsMzIwMCw0MCw2Niw3NSwid2VicCIsNjUsMi41XQ.webp",
             points: [
                 "Iconic black-sand west coast beach.",
                 "Popular for coastal scenery and surfing.",
                 "Great base for exploring the Waitākere coast."
             ],
             info: "Piha is one of Auckland's best-known west coast beaches, surrounded by dramatic coastal scenery.",
-            council: "https://www.aucklandcouncil.govt.nz/"
+            council_1: "https://www.aucklandcouncil.govt.nz/",
+            council_2 : "https://www.newzealand.com/us/piha/"
         },
 
         {
@@ -29,7 +30,7 @@ const PLACES = {
             region: "West Auckland",
             lat: -36.8320,
             lon: 174.4430,
-            image: "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+            image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAIDorfNLW-ik365DmCJfYGJ7TN3Obxxk7anBNxpahtA&s=10",
             points: [
                 "Spectacular black-sand coastline.",
                 "Known for dramatic cliffs and coastal views.",
@@ -160,26 +161,533 @@ const PLACES = {
         }
     ]
 }
-// Application state
+// ============================================================
+// BEACH PAGE CONTROLLER
+// Renders destination data and handles location interactions.
+// ============================================================
+
+
 let userLocation = null;
 let destinationMap = null;
-// Render beach cards
+let mapMarkers = [];
+
+
+// Run after the HTML page has loaded.
+document.addEventListener(
+    "DOMContentLoaded",
+    renderBeaches
+);
+
+
+// Create one card for every beach in the data array.
 function renderBeaches() {
 
+    const grid =
+        document.getElementById("placesGrid");
+
+
+    if (!grid) {
+
+        console.error(
+            "placesGrid was not found in beaches.html"
+        );
+
+        return;
+
+    }
+
+
+    grid.innerHTML =
+        PLACES.beaches
+            .map(
+                (place, index) => `
+                
+                <article class="place-card">
+
+                    <img
+                        class="place-image"
+                        src="${place.image}"
+                        alt="${place.name}"
+                        loading="lazy"
+                    >
+
+                    <div class="place-content">
+
+                        <span class="place-region">
+                            ${place.region}
+                        </span>
+
+
+                        <h2>
+                            ${place.name}
+                        </h2>
+
+
+                        <p class="place-description">
+                            ${place.info}
+                        </p>
+
+
+                        <ul class="place-points">
+
+                            ${place.points
+                                .map(
+                                    point => `
+                                        <li>
+                                            ${point}
+                                        </li>
+                                    `
+                                )
+                                .join("")
+                            }
+
+                        </ul>
+
+
+                        <div class="place-actions">
+
+                            <a
+                                class="btn btn-secondary"
+                                href="${place.council}"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                More information ↗
+                            </a>
+
+
+                            <button
+                                class="location-circle"
+                                type="button"
+                                onclick="showLocation(${index})"
+                                title="View location"
+                            >
+                                📍
+                            </button>
+
+                        </div>
+
+
+                        <button
+                            class="ask-ai-button"
+                            type="button"
+                            onclick="askAI('${place.name}')"
+                        >
+                            ✨ Ask AI about this place
+                        </button>
+
+                    </div>
+
+                </article>
+
+                `
+            )
+            .join("");
+
 }
-// Request location
+
+
+// Gets the user's current position.
 function getUserLocation() {
 
-}
-// Calculate distance
-function calculateDistance() {
+    return new Promise(
+        (resolve, reject) => {
+
+            if (
+                !navigator.geolocation
+            ) {
+
+                reject(
+                    new Error(
+                        "Geolocation is not supported."
+                    )
+                );
+
+                return;
+
+            }
+
+
+            navigator.geolocation
+                .getCurrentPosition(
+
+                    position => {
+
+                        userLocation = {
+
+                            latitude:
+                                position.coords.latitude,
+
+                            longitude:
+                                position.coords.longitude
+
+                        };
+
+
+                        resolve(
+                            userLocation
+                        );
+
+                    },
+
+
+                    error => {
+
+                        reject(error);
+
+                    },
+
+
+                    {
+
+                        enableHighAccuracy: true,
+
+                        timeout: 10000,
+
+                        maximumAge: 300000
+
+                    }
+
+                );
+
+        }
+    );
 
 }
-// Open location popup
-function showLocation() {
+
+
+// Opens the map popup for the selected beach.
+async function showLocation(index) {
+
+    const place =
+        PLACES.beaches[index];
+
+
+    const modal =
+        document.getElementById(
+            "locationModal"
+        );
+
+
+    const title =
+        document.getElementById(
+            "mapPlaceName"
+        );
+
+
+    const distanceText =
+        document.getElementById(
+            "mapDistance"
+        );
+
+
+    modal.classList.add(
+        "open"
+    );
+
+
+    title.textContent =
+        place.name;
+
+
+    distanceText.textContent =
+        "Getting your location...";
+
+
+    try {
+
+        const user =
+            await getUserLocation();
+
+
+        const distance =
+            calculateDistance(
+
+                user.latitude,
+                user.longitude,
+
+                place.lat,
+                place.lon
+
+            );
+
+
+        distanceText.textContent =
+            `${distance.toFixed(1)} km away from you`;
+
+
+        openMap(
+            user,
+            place
+        );
+
+
+        document
+            .getElementById(
+                "googleMapsLink"
+            )
+            .href =
+                `https://www.google.com/maps/dir/${user.latitude},${user.longitude}/${place.lat},${place.lon}`;
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            error
+        );
+
+
+        distanceText.textContent =
+            "Location could not be accessed. Please allow location permission.";
+
+    }
 
 }
-// Open AI Explorer
-function askAI() {
+
+
+// Creates the Leaflet map.
+function openMap(
+    user,
+    place
+) {
+
+    if (
+        !destinationMap
+    ) {
+
+        destinationMap =
+            L.map(
+                "destinationMap"
+            );
+
+
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+
+                attribution:
+                    "&copy; OpenStreetMap contributors"
+
+            }
+        )
+        .addTo(
+            destinationMap
+        );
+
+    }
+
+
+    mapMarkers.forEach(
+        marker =>
+            destinationMap.removeLayer(
+                marker
+            )
+    );
+
+
+    mapMarkers = [];
+
+
+    const userMarker =
+        L.marker(
+            [
+
+                user.latitude,
+
+                user.longitude
+
+            ]
+        )
+        .addTo(
+            destinationMap
+        )
+        .bindPopup(
+            "Your location"
+        );
+
+
+    const placeMarker =
+        L.marker(
+            [
+
+                place.lat,
+
+                place.lon
+
+            ]
+        )
+        .addTo(
+            destinationMap
+        )
+        .bindPopup(
+            place.name
+        );
+
+
+    mapMarkers.push(
+
+        userMarker,
+
+        placeMarker
+
+    );
+
+
+    const bounds =
+        L.latLngBounds(
+
+            [
+
+                [
+
+                    user.latitude,
+
+                    user.longitude
+
+                ],
+
+                [
+
+                    place.lat,
+
+                    place.lon
+
+                ]
+
+            ]
+
+        );
+
+
+    destinationMap.fitBounds(
+        bounds,
+        {
+
+            padding:
+                [40, 40]
+
+        }
+    );
+
+
+    // Required because Leaflet is created inside a hidden modal.
+    setTimeout(
+
+        () =>
+            destinationMap.invalidateSize(),
+
+        200
+
+    );
+
+}
+
+
+// Calculates straight-line distance using coordinates.
+function calculateDistance(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
+
+    const earthRadius =
+        6371;
+
+
+    const latitudeDifference =
+        degreesToRadians(
+            lat2 - lat1
+        );
+
+
+    const longitudeDifference =
+        degreesToRadians(
+            lon2 - lon1
+        );
+
+
+    const calculation =
+
+        Math.sin(
+            latitudeDifference / 2
+        ) ** 2
+
+        +
+
+        Math.cos(
+            degreesToRadians(
+                lat1
+            )
+        )
+
+        *
+
+        Math.cos(
+            degreesToRadians(
+                lat2
+            )
+        )
+
+        *
+
+        Math.sin(
+            longitudeDifference / 2
+        ) ** 2;
+
+
+    const centralAngle =
+
+        2
+
+        *
+
+        Math.atan2(
+
+            Math.sqrt(
+                calculation
+            ),
+
+            Math.sqrt(
+                1 - calculation
+            )
+
+        );
+
+
+    return (
+        earthRadius
+        *
+        centralAngle
+    );
+
+}
+
+
+// Converts degrees into radians for the distance formula.
+function degreesToRadians(
+    degrees
+) {
+
+    return (
+        degrees
+        *
+        Math.PI
+        /
+        180
+    );
+
+}
+// Opens the AI chat with the destination already entered.
+function askAI(
+    placeName
+) {
+
+    window.location.href =
+        `chat.html?place=${encodeURIComponent(
+            placeName
+        )}`;
 
 }
