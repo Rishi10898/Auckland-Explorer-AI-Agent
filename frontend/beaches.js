@@ -46,7 +46,7 @@ const PLACES = [
         lon: 174.4430,
 
         image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHk8MzDG2yRJ-zmg-l4KvyccFuQyFdqaBgOUZp3i3SNw&s=10",
 
         points: [
             "Spectacular black-sand coastline.",
@@ -69,7 +69,7 @@ const PLACES = [
         lon: 174.8300,
 
         image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZjtNU8WdZuFpceip9oZMUg4hFChi4WudjfBDatCEnFg&s=10",
 
         points: [
             "Easy-to-reach waterfront destination.",
@@ -92,7 +92,7 @@ const PLACES = [
         lon: 174.7730,
 
         image:
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSR1Obvd4T0fdbe1pDGXihL43mV2wR4ZY0qhYPvlKfszQ&s=10",
 
         points: [
             "Wide beach on Auckland's North Shore.",
@@ -115,7 +115,7 @@ const PLACES = [
         lon: 174.7490,
 
         image:
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTsk4gvcmY4GYGbX_oUtimwJmOcFUmPrF34hIRXtTA1Lg&s=10",
 
         points: [
             "Large sandy beach.",
@@ -138,7 +138,7 @@ const PLACES = [
         lon: 174.5520,
 
         image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSisE4OjTzqmc5roO9QdCgwNXsChR8Qh6tBN8MgZ1ayXQ&s=10",
 
         points: [
             "Dramatic west coast landscape.",
@@ -161,7 +161,7 @@ const PLACES = [
         lon: 174.4650,
 
         image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTI27tDomzXECZrAdxh2YBf_9kUrg8bOzRbxXSoOg0Xgw&s=10",
 
         points: [
             "Beautiful black-sand beach.",
@@ -184,7 +184,7 @@ const PLACES = [
         lon: 174.6890,
 
         image:
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT1hmvQV_oJ_FzLMOJSQ9m4aFdNXblWHjfNZFFJ7RVWVA&s=10",
 
         points: [
             "Long sandy coastline.",
@@ -207,7 +207,7 @@ const PLACES = [
         lon: 174.6350,
 
         image:
-            "https://images.unsplash.com/photo-1500534623283-312aade485b7",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQv3p66f8U5E2ViNvclpmVgIAWVwmgYaqLgXMyeNRpW1A&s=10",
 
         points: [
             "Sheltered Manukau Harbour setting.",
@@ -230,7 +230,7 @@ const PLACES = [
         lon: 175.0400,
 
         image:
-            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2EBO1ULK0zf7umYaNye3rXvq-0Ac_LcHzDLL6W7B4WQ&s=10",
 
         points: [
             "Eastern Auckland coastal destination.",

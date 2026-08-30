@@ -35,7 +35,23 @@ document.addEventListener("DOMContentLoaded", () => {
         .getElementById("contactForm")
         ?.addEventListener("submit", submitFeedback);
 });
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
 
+const place =
+    params.get("place");
+
+const input =
+    document.getElementById("fInput");
+
+if (place && input) {
+
+    input.value =
+        `Tell me about visiting ${place}`;
+
+}
 /* Creates the interactive map used by the AI Explorer. */
 function initialiseMap() {
     map = L.map("exploreMap").setView(
