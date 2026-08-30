@@ -1,32 +1,29 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
+<meta charset="UTF-8">
 
-    <meta charset="UTF-8">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
 
-    <meta
-        name="viewport"
-        content="width=device-width,initial-scale=1"
-    >
+<title>Parks · Auckland Explorer</title>
 
-    <title>Parks · Auckland Explorer</title>
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
 
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    >
-
-    <link
-        rel="stylesheet"
-        href="styles.css"
-    >
-
+<link
+    rel="stylesheet"
+    href="styles.css"
+>
 </head>
 
-
 <body>
-
 <nav class="nav">
 
     <a
@@ -97,6 +94,8 @@
 </main>
 
 
+<!-- LOCATION POPUP -->
+
 <div
     id="locationPopup"
     class="location-popup"
@@ -106,52 +105,50 @@
 
         <button
             id="closeLocationPopup"
-            class="location-popup-close"
+            class="close-location-popup"
             type="button"
-            aria-label="Close location map"
+            aria-label="Close map"
         >
             ×
         </button>
 
 
-        <p>
+        <p class="popup-label">
             LOCATION
         </p>
 
 
-        <h2
-            id="popupPlaceName"
-        >
+        <h2 id="popupPlaceName">
             Destination
         </h2>
 
 
-        <p
-            id="popupDistance"
-            class="popup-distance"
-        >
+        <p id="popupDistance">
             Getting your location...
         </p>
 
 
         <div
             id="destinationMap"
+            aria-label="Destination map"
         >
         </div>
 
 
-        <p class="map-note">
-            Distance shown is approximate straight-line distance.
-        </p>
-
-    </div>
+        <a
+            id="googleMapsLink"
+            class="btn btn-primary"
+            href="#"
+            target="_blank"
+            rel="noopener"
+        >
+            Open directions →
+        </a>
 
 </div>
 
 
-<footer class="footer">
-    Auckland Explorer · Tāmaki Makaurau
-</footer>
+
 
 
 <script
@@ -159,8 +156,11 @@
 >
 </script>
 
-<script src="parks.js"></script>
 
+<script src="parks.js"></script>
 </body>
+<footer class="footer">
+    Auckland Explorer · Tāmaki Makaurau
+</footer>
 
 </html>

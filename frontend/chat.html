@@ -1,221 +1,412 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
 
-    <title>Auckland Explorer</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
 
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <title>AI Explorer · Auckland Explorer</title>
 
-    <link rel="stylesheet" href="styles.css">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
 
     <style>
-        /* Chat-specific layout */
+
         .ai-page {
-            width: min(900px, 94%);
+            width: min(1000px, 94%);
             height: calc(100vh - 75px);
             margin: auto;
+
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding: 18px 0;
+
+            padding: 14px 0;
+            gap: 10px;
         }
+
+
+        /* HEADER */
 
         .chat-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 15px;
+
+            padding: 14px 18px;
         }
+
+
+        .chat-header h1 {
+            margin: 2px 0 0;
+        }
+
+
+        .chat-header p {
+            margin: 0;
+            font-size: .7rem;
+            color: var(--muted);
+        }
+
+
+        /* STATUS */
 
         .chat-status {
             display: flex;
             align-items: center;
             gap: 7px;
-            color: var(--muted);
+
             font-size: .75rem;
+            color: var(--muted);
         }
+
 
         .status-dot {
             width: 8px;
             height: 8px;
+
             border-radius: 50%;
+
             background: var(--cyan);
-            box-shadow: 0 0 12px var(--cyan);
         }
 
-        .map-wrap {
-            position: relative;
-            height: 180px;
-            overflow: hidden;
-            border-radius: 20px;
+
+        .status-dot.error {
+            background: #ff5c5c;
         }
 
-        #exploreMap {
-            height: 100%;
+
+        .status-dot.loading {
+            animation: pulse 1s infinite;
         }
 
-        #locateResult {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            z-index: 500;
-            display: none;
-            padding: 8px 11px;
-            border-radius: 10px;
-            background: rgba(5,8,22,.88);
-            border: 1px solid var(--border);
-            color: var(--muted);
-            font-size: .7rem;
+
+        @keyframes pulse {
+
+            50% {
+                opacity: .35;
+            }
+
         }
+
+
+        /* CHAT */
 
         .chat-thread {
             flex: 1;
             min-height: 0;
+
             overflow-y: auto;
-            padding: 8px 4px;
+
+            padding: 10px 4px;
+
             scroll-behavior: smooth;
         }
 
+
         .message {
-            max-width: 82%;
-            margin: 14px 0;
-            padding: 14px 17px;
+            max-width: 78%;
+
+            margin: 10px 0;
+
+            padding: 12px 16px;
+
             border-radius: 18px;
-            line-height: 1.6;
-            animation: fadeIn .25s ease;
+
+            line-height: 1.55;
+
+            animation: fadeIn .2s ease;
         }
+
 
         .message.ai {
-            background: rgba(15,23,42,.82);
-            border: 1px solid var(--border);
+
+            background:
+                rgba(15, 23, 42, .82);
+
+            border:
+                1px solid var(--border);
+
         }
+
 
         .message.user {
+
             margin-left: auto;
-            background: linear-gradient(
-                135deg,
-                var(--blue),
-                var(--violet)
-            );
+
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--blue),
+                    var(--violet)
+                );
+
         }
+
 
         .message-name {
-            font-size: .72rem;
+
+            font-size: .7rem;
+
             font-weight: 700;
-            margin-bottom: 5px;
-            opacity: .8;
+
+            margin-bottom: 4px;
+
+            opacity: .75;
+
         }
 
-        .recommendation {
-            margin-top: 12px;
-            padding: 14px;
-            border-radius: 15px;
-            background: rgba(5,8,22,.5);
-            border: 1px solid var(--border);
-        }
 
-        .recommendation a {
-            color: var(--cyan);
-            font-size: .8rem;
-        }
-
-        .quick-actions {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-        }
-
-        .quick-actions button {
-            white-space: nowrap;
-            border: 1px solid var(--border);
-            background: rgba(15,23,42,.8);
-            color: var(--muted);
-            padding: 8px 12px;
-            border-radius: 999px;
-            cursor: pointer;
-            transition: .2s;
-        }
-
-        .quick-actions button:hover {
-            color: var(--text);
-            border-color: var(--cyan);
-            transform: translateY(-1px);
-        }
+        /* CONTROLS */
 
         .chat-controls {
-            padding: 13px;
+
+            padding: 12px;
+
             border-radius: 20px;
+
         }
+
+
+        .quick-actions {
+
+            display: flex;
+
+            gap: 7px;
+
+            overflow-x: auto;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .quick-actions button {
+
+            white-space: nowrap;
+
+            padding: 7px 10px;
+
+            border-radius: 999px;
+
+            border:
+                1px solid var(--border);
+
+            background:
+                rgba(15, 23, 42, .8);
+
+            color:
+                var(--muted);
+
+            cursor: pointer;
+
+        }
+
 
         .control-row {
+
             display: flex;
+
             gap: 8px;
-            margin-bottom: 9px;
+
+            margin-bottom: 8px;
+
         }
+
+
+        .control-row select {
+
+            flex: 1;
+
+        }
+
 
         .chat-input-row {
+
             display: flex;
+
             gap: 8px;
+
         }
 
-        .chat-input-row .input {
+
+        .chat-input-row input {
+
             flex: 1;
+
         }
+
+
+        /* LOCATION BUTTON */
 
         .locate-btn {
-            font-size: .75rem;
-            padding: 8px 12px;
+
+            width: 38px;
+            height: 38px;
+
+            padding: 0;
+
+            border-radius: 50%;
+
+            display: grid;
+
+            place-items: center;
+
         }
 
+
+        /* MAP MODAL */
+
+        .map-modal {
+
+            display: none;
+
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 1000;
+
+            background:
+                rgba(0, 0, 0, .7);
+
+            align-items: center;
+
+            justify-content: center;
+
+        }
+
+
+        .map-modal.active {
+
+            display: flex;
+
+        }
+
+
+        .map-card {
+
+            width:
+                min(700px, 92vw);
+
+            height:
+                min(500px, 75vh);
+
+            position: relative;
+
+            overflow: hidden;
+
+            border-radius: 20px;
+
+        }
+
+
+        #exploreMap {
+
+            width: 100%;
+
+            height: 100%;
+
+        }
+
+
+        .close-map {
+
+            position: absolute;
+
+            top: 10px;
+
+            right: 10px;
+
+            z-index: 1000;
+
+            width: 35px;
+
+            height: 35px;
+
+            border-radius: 50%;
+
+            border: none;
+
+            cursor: pointer;
+
+        }
+
+
         @keyframes fadeIn {
+
             from {
                 opacity: 0;
                 transform: translateY(5px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
+
         }
+
 
         @media (max-width: 700px) {
-            .ai-page {
-                height: calc(100vh - 65px);
-                padding: 10px 0;
-            }
-
-            .nav-links {
-                gap: 9px;
-            }
-
-            .map-wrap {
-                height: 145px;
-            }
 
             .message {
-                max-width: 92%;
+                max-width: 90%;
             }
+
+            .ai-page {
+                width: 96%;
+            }
+
         }
+
     </style>
+
 </head>
+
 
 <body>
 
+
 <nav class="nav">
 
-    <a class="brand" href="index.html">
+    <a
+        class="brand"
+        href="index.html"
+    >
         🌊 Auckland Explorer
     </a>
 
+
     <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="explore.html">Explore</a>
-        <a href="chat.html">AI Explorer</a>
-        <a href="contact.html">Contact</a>
+
+        <a href="index.html">
+            Home
+        </a>
+
+        <a href="explore.html">
+            Explore
+        </a>
+
+        <a href="chat.html">
+            AI Explorer
+        </a>
+
+        <a href="contact.html">
+            Contact
+        </a>
+
     </div>
 
 </nav>
@@ -223,49 +414,56 @@
 
 <main class="ai-page">
 
-    <!-- AI HEADER -->
-    <section class="card">
 
-        <div class="chat-header">
+    <!-- HEADER -->
 
-            <div>
-                <p>AI TRAVEL GUIDE</p>
-                <h1>Where should we go?</h1>
-            </div>
+    <section class="card chat-header">
 
-            <div>
-                <div class="chat-status">
-                    <span class="status-dot"></span>
-                    <span id="geoLabel">Locating...</span>
-                </div>
+        <div>
 
-                <button
-                    type="button"
-                    class="btn btn-secondary locate-btn"
-                    onclick="locateMe(true)">
-                    📍 Locate Me
-                </button>
-            </div>
+            <p>
+                AI TRAVEL GUIDE
+            </p>
+
+            <h1>
+                Where should we go?
+            </h1>
+
+        </div>
+
+
+        <div class="chat-status">
+
+            <span
+                id="statusDot"
+                class="status-dot"
+            ></span>
+
+            <span id="statusText">
+                Getting location...
+            </span>
+
+
+            <button
+                id="locateBtn"
+                class="btn btn-secondary locate-btn"
+                type="button"
+                title="Show my location"
+            >
+                📍
+            </button>
 
         </div>
 
     </section>
 
 
-    <!-- COMPACT MAP -->
-    <section class="card map-wrap">
-
-        <div id="exploreMap"></div>
-
-        <div id="locateResult"></div>
-
-    </section>
-
-
     <!-- CHAT -->
+
     <section
         id="chatThread"
-        class="chat-thread">
+        class="chat-thread"
+    >
 
         <div class="message ai">
 
@@ -276,43 +474,51 @@
             Kia ora! 👋 I'm your AI guide for
             Tāmaki Makaurau.
 
-            <br><br>
-
             Tell me what you'd like to explore,
-            your budget and how you'd prefer to travel.
+            your budget, and how you'd like to travel.
 
         </div>
 
     </section>
 
 
-    <!-- CHAT CONTROLS -->
+    <!-- CONTROLS -->
+
     <section class="card chat-controls">
 
+
         <!-- QUICK PROMPTS -->
+
         <div class="quick-actions">
 
             <button
                 type="button"
-                onclick="quickSend('Find me a peaceful beach')">
+                data-prompt="Find me a peaceful beach"
+            >
                 🏖️ Beach
             </button>
 
+
             <button
                 type="button"
-                onclick="quickSend('Find me a peaceful park walk')">
+                data-prompt="Find me a peaceful park walk"
+            >
                 🌿 Park
             </button>
 
-            <button
-                type="button"
-                onclick="quickSend('Find interesting attractions in Auckland')">
-                ✨ Attractions
-            </button>
 
             <button
                 type="button"
-                onclick="quickSend('Find a coastal walk with sea views')">
+                data-prompt="Find interesting attractions in Auckland"
+            >
+                ✨ Attractions
+            </button>
+
+
+            <button
+                type="button"
+                data-prompt="Find a coastal walk with sea views"
+            >
                 🌊 Coastal Walk
             </button>
 
@@ -320,6 +526,7 @@
 
 
         <!-- OPTIONS -->
+
         <div class="control-row">
 
             <select id="fMode">
@@ -345,33 +552,56 @@
 
             <select id="fRadius">
 
-                <option value="2000">2 km</option>
-                <option value="5000">5 km</option>
-                <option value="10000" selected>10 km</option>
-                <option value="25000">25 km</option>
-                <option value="50000">50 km</option>
+                <option value="2000">
+                    2 km
+                </option>
+
+                <option value="5000">
+                    5 km
+                </option>
+
+                <option
+                    value="10000"
+                    selected
+                >
+                    10 km
+                </option>
+
+                <option value="25000">
+                    25 km
+                </option>
+
+                <option value="50000">
+                    50 km
+                </option>
 
             </select>
 
         </div>
 
 
-        <!-- MESSAGE INPUT -->
-        <form id="chatForm" class="chat-input-row">
+        <!-- INPUT -->
+
+        <form
+            id="chatForm"
+            class="chat-input-row"
+        >
 
             <input
-                class="input"
                 id="fInput"
+                class="input"
                 type="text"
-                placeholder="Ask anything about Auckland..."
+                placeholder="Ask about Auckland..."
                 autocomplete="off"
                 required
             >
 
+
             <button
-                class="btn btn-primary"
                 id="sendBtn"
-                type="submit">
+                class="btn btn-primary"
+                type="submit"
+            >
                 ↑
             </button>
 
@@ -379,14 +609,38 @@
 
     </section>
 
+
 </main>
 
 
+<!-- MAP MODAL -->
+
+<div
+    id="mapModal"
+    class="map-modal"
+>
+
+    <div class="card map-card">
+
+        <button
+            id="closeMap"
+            class="close-map"
+            type="button"
+        >
+            ×
+        </button>
+
+
+        <div id="exploreMap"></div>
+
+    </div>
+
+</div>
+
+
 <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
-
-<script src="app.js"></script>
-
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+<script src="chat.js"></script>
 </body>
 </html>
