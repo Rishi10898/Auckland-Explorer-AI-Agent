@@ -160,3 +160,26 @@ const PLACES = {
         }
     ]
 }
+// Application state
+let userLocation = null;
+let destinationMap = null;
+// Render beach cards
+function renderBeaches() {
+
+}
+// Request location
+function getUserLocation() {
+
+}
+// Calculate distance
+function calculateDistance() {
+
+}
+// Open location popup
+function showLocation() {
+
+}
+// Open AI Explorer
+function askAI() {
+
+}

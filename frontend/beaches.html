@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1">
+
+    <title>Auckland Beaches · Auckland Explorer</title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+
+<body>
+
+<nav class="nav">
+
+    <a class="brand" href="index.html">
+        🌊 Auckland Explorer
+    </a>
+
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="explore.html">Explore</a>
+        <a href="chat.html">AI Explorer</a>
+        <a href="contact.html">Contact</a>
+    </div>
+
+</nav>
+
+
+<main class="container">
+
+    <!-- PAGE INTRODUCTION -->
+    <section class="section places-hero">
+
+        <p class="places-eyebrow">
+            DISCOVER TAMAKI MAKAURAU
+        </p>
+
+        <h1>
+            Auckland
+            <span class="gradient-text">
+                Beaches.
+            </span>
+        </h1>
+
+        <p class="places-intro">
+            Discover some of Auckland's most popular beaches,
+            compare destinations and explore where they are
+            relative to your location.
+        </p>
+
+
+        <!-- LOCATION BUTTON -->
+        <button
+            class="location-button"
+            id="locationButton"
+            type="button">
+
+            📍 Use my location
+
+        </button>
+
+
+        <p
+            class="location-status"
+            id="locationStatus">
+
+            Location has not been requested yet.
+
+        </p>
+
+    </section>
+
+    <!-- BEACH CARDS -->
+    <section class="section">
+
+        <div class="section-title">
+
+            <p>
+                POPULAR DESTINATIONS
+            </p>
+
+            <h2>
+                Choose where you want to explore
+            </h2>
+
+            <p>
+                Select a destination to learn more,
+                check its distance or ask the AI Explorer
+                for personalised recommendations.
+            </p>
+
+        </div>
+
+
+        <!-- JavaScript inserts the 10 cards here -->
+        <div
+            class="places-grid"
+            id="placesGrid">
+
+        </div>
+
+    </section>
+
+</main>
+<!-- LOCATION POPUP -->
+
+<div
+    class="location-modal"
+    id="locationModal"
+    aria-hidden="true">
+
+    <div class="location-modal-panel">
+
+        <button
+            class="modal-close"
+            id="closeLocationModal"
+            type="button"
+            aria-label="Close location map">
+
+            ×
+
+        </button>
+
+
+        <div class="modal-heading">
+
+            <p>
+                DESTINATION LOCATION
+            </p>
+
+            <h2
+                id="mapPlaceName">
+
+                Auckland destination
+
+            </h2>
+
+            <p
+                id="mapDistance">
+
+                Calculating distance...
+
+            </p>
+
+        </div>
+
+        <div
+            id="destinationMap">
+
+        </div>
+
+
+        <div class="map-actions">
+
+            <a
+                class="btn btn-primary"
+                id="googleMapsLink"
+                href="#"
+                target="_blank"
+                rel="noopener">
+
+                🗺 Open directions
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+<footer class="footer">
+
+    Auckland Explorer · Tāmaki Makaurau
+
+</footer>
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+<script src="beaches.js"></script>
+</body>
+</html>
