@@ -58,7 +58,7 @@ const PLACES = [
             "Muriwai is a rugged west coast destination with black-sand beaches, trails and coastal viewpoints.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/en/parks-recreation/find-park-beach/park-detail/220.html"
+            "https://www.newzealand.com/nz/muriwai/"
     },
 
 
@@ -81,7 +81,7 @@ const PLACES = [
             "Mission Bay is a popular Auckland waterfront destination close to the city centre.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://www.aucklandnz.com/explore/mission-bay"
     },
 
 
@@ -104,7 +104,7 @@ const PLACES = [
             "Takapuna Beach combines a large urban beach with views across the Hauraki Gulf.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://www.aucklandnz.com/explore/takapuna-beach"
     },
 
 
@@ -127,7 +127,7 @@ const PLACES = [
             "Long Bay provides a large coastal recreation area north of Auckland.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://exploreauckland.nz/swimming-at-long-bay-beach-auckland/"
     },
 
 
@@ -150,7 +150,7 @@ const PLACES = [
             "Karekare is a dramatic west coast destination within the Waitākere Ranges.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://www.aucklandnz.com/explore/karekare-beach"
     },
 
 
@@ -173,7 +173,7 @@ const PLACES = [
             "Bethells Beach is a scenic west coast destination surrounded by native landscape.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://www.aucklandnz.com/explore/bethells-beach"
     },
 
 
@@ -196,7 +196,7 @@ const PLACES = [
             "Orewa Beach provides an accessible coastal destination north of Auckland.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://www.aucklandnz.com/explore/orewa-beach"
     },
 
 
@@ -219,7 +219,7 @@ const PLACES = [
             "Cornwallis is a popular family-oriented spot on the Manukau Harbour.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/en/parks-recreation/find-park-beach/park-detail/210.html"
+            "https://www.cornwallis.org.nz/activities"
     },
 
 
@@ -242,7 +242,7 @@ const PLACES = [
             "Maraetai is a coastal destination in east Auckland with views across the Hauraki Gulf.",
 
         council:
-            "https://www.aucklandcouncil.govt.nz/"
+            "https://www.aucklandnz.com/explore/maraetai-beach"
     }
 
 ];
