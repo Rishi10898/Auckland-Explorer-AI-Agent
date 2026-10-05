@@ -1,123 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-
     <title>Explore Auckland</title>
-
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
-    <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-
-<nav class="nav">
+  <nav class="nav">
     <a class="brand" href="index.html">🌊 Auckland Explorer</a>
-
-    <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="explore.html" class="active">Explore</a>
-        <a href="chat.html">AI Explorer</a>
-        <a href="contact.html">Contact</a>
-    </div>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+  <a href="explore.html" class="active">Explore</a>
+<a href="chat.html">AI Explorer</a>
+<a href="contact.html">Contact</a>
+</div>
 </nav>
-
-
 <main class="container">
-
-    <!-- HERO -->
-    <section class="section">
-
+<button
+    class="back-button"
+    type="button"
+    onclick="goBack()"
+>
+    ← Back
+</button>
+<script>
+    function goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.href = "index.html";
+        }
+    }
+</script>
+  <!-- HERO -->
+  <section class="section">
     <div class="section-title">
-        <p>DISCOVER TAMAKI MAKAURAU</p>
-
-        <h1>
-            <span class="gradient-text">Explore Auckland</span>
-        </h1>
-
-        <p>
-            Choose a category to discover Auckland.
-        </p>
-    </div>
-    <!-- AI CTA -->
-        <div class="card glow ai-cta">
-
-            <p>NEED SOMETHING MORE PERSONAL?</p>
-
-            <h2>
-                Let Auckland Explorer
-                find the right place for you.
-            </h2>
-
-            <p>
-                Tell the AI what you want, your preferred transport,
-                budget and location.
-            </p>
-
-        </div>
-
-    </section>
-    <div class="grid">
-
-        <article class="card">
-            <div class="card-icon">🏖️</div>
-            <h2>Beaches</h2>
-            <p>
-                Explore Auckland's most popular beaches
-                and coastal destinations.
-            </p>
-
-            <a class="btn btn-secondary"
-               href="beaches.html">
-                Explore beaches →
-            </a>
-        </article>
-
-        <article class="card">
-            <div class="card-icon">🌿</div>
-            <h2>Parks</h2>
-            <p>
-                Discover parks, reserves and green spaces
-                across Auckland.
-            </p>
-
-            <a class="btn btn-secondary"
-               href="parks.html">
-                Explore parks →
-            </a>
-        </article>
-
-        <article class="card">
-            <div class="card-icon">🏙️</div>
-            <h2>City & attractions</h2>
-            <p>
-                Discover Auckland's most interesting
-                attractions and destinations.
-            </p>
-
-            <a class="btn btn-secondary"
-               href="attractions.html">
-                Explore attractions →
-            </a>
-        </article>
-
-    </div>
-
+      <p>DISCOVER TAMAKI MAKAURAU</p>
+    <h1>
+      <span class="gradient-text">Explore Auckland</span>
+  </h1>
+  <p> Choose a category to discover Auckland. </p>
+</div>
+<!-- AI CTA -->
+<div class="card glow ai-cta">
+  <p>NEED SOMETHING MORE PERSONAL?</p>
+<h2> Let Auckland Explorer find the right place for you. </h2>
+<p> Tell the AI what you want, your preferred transport, budget and location. </p>
+</div>
 </section>
-
+<div class="grid">
+  <article class="card">
+    <div class="card-icon">🏖️</div>
+  <h2>Beaches</h2>
+<p> Explore Auckland's most popular beaches and coastal destinations. </p>
+<a class="btn btn-secondary" href="beaches.html"> Explore beaches → </a>
+</article>
+<article class="card">
+  <div class="card-icon">🌿</div>
+<h2>Parks</h2>
+<p> Discover parks, reserves and green spaces across Auckland. </p>
+<a class="btn btn-secondary" href="parks.html"> Explore parks → </a>
+</article>
+<article class="card">
+  <div class="card-icon">🏙️</div>
+<h2>City & attractions</h2>
+<p> Discover Auckland's most interesting attractions and destinations. </p>
+<a class="btn btn-secondary" href="attractions.html"> Explore attractions → </a>
+</article>
+</div>
+</section>
 </main>
-
-<footer class="footer">
-    Auckland Explorer · Tāmaki Makaurau
-</footer>
-
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="places.js"></script>
-<script src="explore.js"></script>
-
+<footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+<script src="places.js">
+</script>
+<script src="explore.js">
+</script>
 </body>
 </html>

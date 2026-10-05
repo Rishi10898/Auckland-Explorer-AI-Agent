@@ -263,8 +263,6 @@ function updateUserMarker() {
         userLocation.lon
     ], 11);
 }
-
-
 /* Refreshes cards after location becomes available. */
 function refreshCards() {
     const category =
@@ -273,55 +271,36 @@ function refreshCards() {
 
     showCategory(category);
 }
-
-
 /* Adds destination markers to the map. */
 function updateMap(places) {
     if (!map) return;
 
-    placeMarkers.forEach(marker =>
-        map.removeLayer(marker)
-    );
+    placeMarkers.forEach(marker=>map.removeLayer(marker));
 
     placeMarkers = places.map(place =>
         L.marker([place.lat, place.lon])
             .addTo(map)
-            .bindPopup(
-                `<strong>${escapeHtml(place.name)}</strong>`
-            )
+            .bindPopup(`<strong>${escapeHtml(place.name)}</strong>`)
     );
 }
-
-
 /* Opens Google Maps with user → destination. */
 function getDirections(lat, lon, name) {
-    const origin = userLocation
-        ? `${userLocation.lat},${userLocation.lon}`
-        : "";
+    const origin = userLocation ? `${userLocation.lat},${userLocation.lon}` : "";
 
     const url =
-        `https://www.google.com/maps/dir/?api=1` +
-        `&origin=${encodeURIComponent(origin)}` +
-        `&destination=${lat},${lon}` +
-        `&destination_place_id=` +
+        `https://www.google.com/maps/dir/?api=1`+
+        `&origin=${encodeURIComponent(origin)}`+
+        `&destination=${lat},${lon}`+
+        `&destination_place_id=`+
         `&travelmode=transit`;
 
     window.open(url, "_blank", "noopener");
 }
-
-
 /* Opens the AI chat with the destination already typed. */
 function askAI(placeName) {
-    const prompt =
-        `Tell me more about ${placeName}. ` +
-        `Consider the current weather, my location, ` +
-        `transport options, travel time and what I should know before visiting.`;
-
-    window.location.href =
-        `chat.html?prompt=${encodeURIComponent(prompt)}`;
+    const prompt = `Tell me more about ${placeName}.Consider the current weather,my location,transport options,travel time and what I should know before visiting.`;
+    window.location.href = `chat.html?prompt=${encodeURIComponent(prompt)}`;
 }
-
-
 /* Calculates straight-line distance between two coordinates. */
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
@@ -339,20 +318,14 @@ function getDistance(lat1, lon1, lat2, lon2) {
         Math.sqrt(1 - a)
     );
 }
-
-
 function toRadians(value) {
     return value * Math.PI / 180;
 }
-
-
 function formatDistance(distance) {
     return distance < 1
         ? `${Math.round(distance * 1000)} m away`
         : `${distance.toFixed(1)} km away`;
 }
-
-
 /* Prevents destination data from becoming executable HTML. */
 function escapeHtml(value) {
     return String(value ?? "")
@@ -362,8 +335,6 @@ function escapeHtml(value) {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
 }
-
-
 function escapeJs(value) {
     return String(value ?? "")
         .replaceAll("\\", "\\\\")
