@@ -53,4 +53,4 @@ supports sustainable travel
 Trade-offs between accuracy and simplicity
 importance of structured data for AI
 real-world system design experience
-![Profile Views](https://komarev.com/ghpvc/?username=Rishi10898&label=Profile%20views&color=0e75b6&style=flat)
+![Profile Views](https://komarev.com/ghpvc/?username=Rishi10898)
