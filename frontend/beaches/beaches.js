@@ -57,7 +57,7 @@ const PLACES = [
     },
     {
         name: "Long Bay",
-        region: "North Auckland",
+        region: "North Shore",
         lat: -36.678,
         lon: 174.749,
         image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTsk4gvcmY4GYGbX_oUtimwJmOcFUmPrF34hIRXtTA1Lg&s=10",
@@ -95,7 +95,7 @@ const PLACES = [
     },
     {
         name: "Orewa Beach",
-        region: "North Auckland",
+        region: "North Shore",
         lat: -36.586,
         lon: 174.689,
         image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT1hmvQV_oJ_FzLMOJSQ9m4aFdNXblWHjfNZFFJ7RVWVA&s=10",
@@ -134,95 +134,180 @@ const PLACES = [
 ];
 let userLocation = null,
     destinationMap = null;
+const REGIONS = {
+    "beaches-east.html": "East Auckland",
+    "beaches-west.html": "West Auckland",
+    "beaches-south.html": "South Auckland",
+    "beaches-north-shore.html": "North Shore",
+    "beaches-central.html": "Central Auckland",
+    "beaches-hauraki.html": "Hauraki",
+    "beaches-gulf-islands.html": "Gulf Islands",
+};
+function getCurrentRegion() {
+    const a = window.location.pathname.split("/").pop().toLowerCase();
+    return REGIONS[a] || "West Auckland";
+}
 function renderPlaces() {
-    const n = document.getElementById("placesGrid");
-    n
-        ? (n.innerHTML = PLACES.map(
-              (n, a) =>
-                  `\n\n            <article class="card place-card">\n\n\n                <img\n                    class="place-image"\n                    src="${n.image}"\n                    alt="${n.name}"\n                    loading="lazy"\n                >\n\n\n                <div class="place-content">\n\n\n                    <p class="place-region">\n\n                        ${n.region}\n\n                    </p>\n\n\n                    <h2>\n\n                        ${n.name}\n\n                    </h2>\n\n\n                    <p class="place-description">\n\n                        ${n.info}\n\n                    </p>\n\n\n                    <ul class="place-points">\n\n                        ${n.points.map((n) => `<li>${n}</li>`).join("")}\n\n                    </ul>\n\n\n                    <div class="place-actions">\n\n\n                        \x3c!-- MORE INFORMATION --\x3e\n\n                        <a\n                            class="btn btn-secondary"\n                            href="${n.council}"\n                            target="_blank"\n                            rel="noopener"\n                        >\n                            More information →\n                        </a>\n\n\n                        \x3c!-- CIRCULAR MAP BUTTON --\x3e\n\n                        <button\n                            class="location-circle"\n                            type="button"\n                            onclick="showLocation(${a})"\n                            title="View location and distance"\n                            aria-label="View location"\n                        >\n                            📍\n                        </button>\n\n\n                    </div>\n\n\n                    \x3c!-- ASK AI --\x3e\n\n                    <button\n                        class="ask-ai-button"\n                        type="button"\n                        onclick='askAI(${JSON.stringify(n.name)})'\n                    >\n                        ✨ Ask AI about this place\n                    </button>\n\n\n                </div>\n\n\n            </article>\n\n            `
-          ).join(""))
-        : console.error("placesGrid was not found.");
+    const a = document.getElementById("placesGrid");
+    if (!a) return;
+    const n = getCurrentRegion(),
+        t = PLACES.filter((a) => a.region === n);
+    0 !== t.length
+        ? ((a.innerHTML = t
+              .map(
+                  (a, n) =>
+                      `\n        <article class="card place-card">\n            <img\n                class="place-image"\n                src="${a.image}"\n                alt="${a.name}"\n                loading="lazy"\n            >\n\n            <div class="place-content">\n                <p class="place-region">${a.region}</p>\n                <h2>${a.name}</h2>\n                <p class="place-description">${a.info}</p>\n\n                <ul class="place-points">\n                    ${a.points.map((a) => `<li>${a}</li>`).join("")}\n                </ul>\n\n                <div class="place-actions">\n                    <a\n                        class="btn btn-secondary"\n                        href="${a.council}"\n                        target="_blank"\n                        rel="noopener noreferrer"\n                    >\n                        More information →\n                    </a>\n\n                    <button\n                        class="location-circle"\n                        type="button"\n                        onclick="showLocation(${n})"\n                        title="View location and distance"\n                        aria-label="View ${a.name} location"\n                    >\n                        📍\n                    </button>\n                </div>\n\n                <button\n                    class="ask-ai-button"\n                    type="button"\n                    onclick="askAI(${JSON.stringify(a.name)})"\n                >\n                    ✨ Ask AI about this place\n                </button>\n            </div>\n        </article>\n    `
+              )
+              .join("")),
+          (window.currentPlaces = t))
+        : (a.innerHTML =
+              '\n            <p class="no-recommendations">\n                No recommendations available in this region yet.\n            </p>\n        ');
 }
 function setupPopup() {
-    const n = document.getElementById("locationPopup"),
-        a = document.getElementById("closeLocationPopup");
-    a?.addEventListener("click", () => {
-        closeLocationPopup();
-    }),
-        n?.addEventListener("click", (a) => {
-            a.target === n && closeLocationPopup();
+    const a = document.getElementById("locationPopup"),
+        n = document.getElementById("closeLocationPopup");
+    n?.addEventListener("click", closeLocationPopup),
+        a?.addEventListener("click", (n) => {
+            n.target === a && closeLocationPopup();
         });
 }
 function closeLocationPopup() {
-    const n = document.getElementById("locationPopup");
-    n?.classList.remove("active"), destinationMap && (destinationMap.remove(), (destinationMap = null));
+    document.getElementById("locationPopup")?.classList.remove("active"),
+        destinationMap && (destinationMap.remove(), (destinationMap = null));
 }
-function showLocation(n) {
-    const a = PLACES[n];
-    if (!a) return void console.error("Destination not found:", n);
+function showLocation(a) {
+    const n = window.currentPlaces?.[a];
+    if (!n) return;
     const t = document.getElementById("locationPopup");
-    t?.classList.add("active"),
-        (document.getElementById("popupPlaceName").textContent = a.name),
+    t &&
+        (t.classList.add("active"),
+        (document.getElementById("popupPlaceName").textContent = n.name),
         (document.getElementById("popupDistance").textContent = "Getting your location..."),
-        getUserLocation(() => {
-            const n = calculateDistance(userLocation.latitude, userLocation.longitude, a.lat, a.lon);
+        getUserLocation((a) => {
+            const t = calculateDistance(a.latitude, a.longitude, n.lat, n.lon);
             (document.getElementById("popupDistance").textContent =
-                `Approximately ${n.toFixed(1)} km from your location.`),
+                `Approximately ${t.toFixed(1)} km from your location.`),
                 (document.getElementById("googleMapsLink").href =
-                    `https://www.google.com/maps/dir/${userLocation.latitude},${userLocation.longitude}/${a.lat},${a.lon}`),
-                setTimeout(() => {
-                    createMap(a);
-                }, 100);
-        });
+                    `https://www.google.com/maps/dir/?api=1&origin=${a.latitude},${a.longitude}&destination=${encodeURIComponent(n.name + ", Auckland, New Zealand")}`),
+                createMap(n, a);
+        }));
 }
-function getUserLocation(n) {
-    if (!userLocation)
-        return navigator.geolocation
-            ? void navigator.geolocation.getCurrentPosition(
-                  (a) => {
-                      (userLocation = { latitude: a.coords.latitude, longitude: a.coords.longitude }), n();
-                  },
-                  (a) => {
-                      console.warn("Location unavailable:", a),
-                          (userLocation = { latitude: -36.8485, longitude: 174.7633 }),
-                          n();
-                  },
-                  { enableHighAccuracy: !0, timeout: 1e4, maximumAge: 3e5 }
-              )
-            : ((userLocation = { latitude: -36.8485, longitude: 174.7633 }), void n());
-    n();
+function getUserLocation(a) {
+    userLocation
+        ? a(userLocation)
+        : navigator.geolocation
+          ? navigator.geolocation.getCurrentPosition(
+                (n) => {
+                    userLocation = { latitude: n.coords.latitude, longitude: n.coords.longitude };
+                    try {
+                        sessionStorage.setItem("aucklandExplorerLocation", JSON.stringify(userLocation));
+                    } catch (a) {
+                        console.warn("Could not cache location.", a);
+                    }
+                    a(userLocation);
+                },
+                () => {
+                    document.getElementById("popupDistance").textContent =
+                        "Location unavailable. Please enable location access and try again.";
+                },
+                { enableHighAccuracy: !0, timeout: 1e4, maximumAge: 3e5 }
+            )
+          : (document.getElementById("popupDistance").textContent = "Your location is not supported by this browser.");
 }
-function createMap(n) {
-    const a = document.getElementById("destinationMap");
-    if (!a) return void console.error("destinationMap element not found.");
-    destinationMap && (destinationMap.remove(), (destinationMap = null)),
-        (a.innerHTML = ""),
+function createMap(a, n) {
+    const t = document.getElementById("destinationMap");
+    if (!t || "undefined" == typeof L) return;
+    destinationMap && destinationMap.remove(),
+        (t.innerHTML = ""),
         (destinationMap = L.map("destinationMap")),
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19,
             attribution: "&copy; OpenStreetMap contributors",
         }).addTo(destinationMap);
-    const t = [userLocation.latitude, userLocation.longitude],
-        e = [n.lat, n.lon];
-    L.marker(t).addTo(destinationMap).bindPopup("Your location"), L.marker(e).addTo(destinationMap).bindPopup(n.name);
-    const o = L.latLngBounds([t, e]);
-    destinationMap.fitBounds(o, { padding: [50, 50] }),
+    const e = [n.latitude, n.longitude],
+        o = [a.lat, a.lon];
+    L.marker(e).addTo(destinationMap).bindPopup("Your location"), L.marker(o).addTo(destinationMap).bindPopup(a.name);
+    const i = L.latLngBounds([e, o]);
+    destinationMap.fitBounds(i, { padding: [50, 50] }),
         setTimeout(() => {
-            destinationMap.invalidateSize(), destinationMap.fitBounds(o, { padding: [50, 50] });
+            destinationMap && (destinationMap.invalidateSize(), destinationMap.fitBounds(i, { padding: [50, 50] }));
         }, 250);
 }
-function calculateDistance(n, a, t, e) {
-    const o = degreesToRadians(t - n),
-        i = degreesToRadians(e - a),
-        s = Math.sin(o / 2) ** 2 + Math.cos(degreesToRadians(n)) * Math.cos(degreesToRadians(t)) * Math.sin(i / 2) ** 2;
+function calculateDistance(a, n, t, e) {
+    const o = degreesToRadians(t - a),
+        i = degreesToRadians(e - n),
+        s = Math.sin(o / 2) ** 2 + Math.cos(degreesToRadians(a)) * Math.cos(degreesToRadians(t)) * Math.sin(i / 2) ** 2;
     return 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s)) * 6371;
 }
-function degreesToRadians(n) {
-    return (n * Math.PI) / 180;
+function degreesToRadians(a) {
+    return (a * Math.PI) / 180;
 }
-function askAI(n) {
-    window.location.href = `chat.html?place=${encodeURIComponent(n)}`;
+function askAI(a) {
+    window.location.href = `chat.html?place=${encodeURIComponent(a)}`;
 }
 document.addEventListener("DOMContentLoaded", () => {
+    try {
+        const a = sessionStorage.getItem("aucklandExplorerLocation");
+        a && (userLocation = JSON.parse(a));
+    } catch (a) {
+        console.warn("Could not restore cached location.", a);
+    }
     renderPlaces(), setupPopup();
+});
+
+function showDistances() {
+    const badges = document.querySelectorAll(".distance-badge");
+
+    if (!badges.length) return;
+
+    badges.forEach(badge => {
+        badge.textContent = "Getting distance...";
+        badge.classList.add("loading");
+    });
+
+    navigator.geolocation?.getCurrentPosition(
+        position => {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+
+            badges.forEach(badge => {
+                const destination = badge.dataset.destination;
+
+                // Look up the matching destination coordinates in PLACES.
+                const place = PLACES.find(
+                    item => item.name.toLowerCase() ===
+                        destination.split(",")[0].toLowerCase()
+                );
+
+                if (!place) {
+                    badge.textContent = "Distance unavailable";
+                    badge.classList.remove("loading");
+                    return;
+                }
+
+                const distance = calculateDistance(
+                    userLat, userLon, place.lat, place.lon
+                );
+
+                badge.textContent = `Approx. ${distance.toFixed(1)} km`;
+                badge.classList.remove("loading");
+            });
+        },
+        () => {
+            badges.forEach(badge => {
+                badge.textContent = "Distance unavailable";
+                badge.classList.remove("loading");
+            });
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+        }
+    );
+}
+document.addEventListener("DOMContentLoaded", () => {
+    renderPlaces();
+    setupPopup();
+    showDistances();
 });
