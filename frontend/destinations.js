@@ -373,12 +373,13 @@ async function loadDestinationMedia(cards) {
   for (let index = 0; index < cards.length; index += 3) {
     await Promise.all(cards.slice(index, index + 3).map(async (card) => {
       const title = card.querySelector("h2").textContent.replace(/^\d+\.\s*/, "");
+      const placeWords = mediaMatchWords(title);
       const query = new URLSearchParams({
         action: "query",
         generator: "search",
         gsrsearch: `${title} Auckland New Zealand`,
         gsrnamespace: "0",
-        gsrlimit: "1",
+        gsrlimit: "5",
         prop: "pageimages|info",
         piprop: "thumbnail",
         pithumbsize: "640",
@@ -390,7 +391,10 @@ async function loadDestinationMedia(cards) {
         const response = await fetch(`https://en.wikipedia.org/w/api.php?${query}`);
         if (!response.ok) throw new Error(`Image search returned HTTP ${response.status}.`);
         const result = await response.json();
-        const article = Object.values(result.query?.pages || {})[0];
+        const articles = Object.values(result.query?.pages || {});
+        const article = articles.find((candidate) =>
+          mediaTitleMatches(candidate.title, placeWords)
+        );
         if (article?.fullurl) {
           const articleUrl = new URL(article.fullurl);
           if (articleUrl.hostname === "wikipedia.org" || articleUrl.hostname.endsWith(".wikipedia.org")) {
@@ -398,14 +402,14 @@ async function loadDestinationMedia(cards) {
           }
         }
         const image = card.querySelector(".destination-image");
-        let imageUrl = article?.thumbnail?.source;
+        let imageUrl = article?.thumbnail?.source || null;
         if (!imageUrl) {
           const mediaQuery = new URLSearchParams({
             action: "query",
             generator: "search",
-            gsrsearch: `filetype:bitmap ${title} Auckland New Zealand`,
+            gsrsearch: `"${title}" Auckland`,
             gsrnamespace: "6",
-            gsrlimit: "1",
+            gsrlimit: "5",
             prop: "imageinfo",
             iiprop: "url",
             iiurlwidth: "640",
@@ -415,7 +419,10 @@ async function loadDestinationMedia(cards) {
           const mediaResponse = await fetch(`https://commons.wikimedia.org/w/api.php?${mediaQuery}`);
           if (!mediaResponse.ok) throw new Error(`Image fallback returned HTTP ${mediaResponse.status}.`);
           const media = await mediaResponse.json();
-          imageUrl = Object.values(media.query?.pages || {})[0]?.imageinfo?.[0]?.thumburl;
+          const imagePage = Object.values(media.query?.pages || {}).find((candidate) =>
+            mediaTitleMatches(candidate.title, placeWords)
+          );
+          imageUrl = imagePage?.imageinfo?.[0]?.thumburl || null;
         }
         if (imageUrl) {
           image.src = imageUrl;
@@ -427,6 +434,21 @@ async function loadDestinationMedia(cards) {
       }
     }));
   }
+}
+
+function mediaMatchWords(title) {
+  const generic = new Set([
+    "auckland", "beach", "coast", "domain", "gardens", "island",
+    "new", "park", "regional", "reserve", "zealand",
+  ]);
+  return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ")
+    .trim().split(/\s+/).filter((word) => word && !generic.has(word));
+}
+
+function mediaTitleMatches(candidate, placeWords) {
+  const titleWords = new Set(mediaMatchWords(candidate));
+  return placeWords.length > 0 && placeWords.every((word) => titleWords.has(word));
 }
 
 async function initializeDistances(locationNotice) {
