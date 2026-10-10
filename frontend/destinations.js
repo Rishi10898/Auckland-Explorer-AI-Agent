@@ -320,7 +320,6 @@ const CATEGORY_DETAILS = {
     const directions = new URL("https://www.google.com/maps/dir/");
     directions.searchParams.set("api", "1");
     directions.searchParams.set("destination", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
-    directions.searchParams.set("travelmode", ferryRequired ? "transit" : "driving");
     return `
       <article class="card destination-card">
         <p class="place-region">${safeText(regionDetails[0])} · ${safeText(categoryDetails[2])}</p>
