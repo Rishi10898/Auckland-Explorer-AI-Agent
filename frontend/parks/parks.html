@@ -4,62 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" >
     <title>Parks · Auckland Explorer</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" >
-  <link rel="stylesheet" href="styles.css" >
+  <link rel="stylesheet" href="../styles.css" >
 </head>
 <body>
   <nav class="nav">
-    <a class="brand" href="index.html" > 🌊 Auckland Explorer </a>
+    <a class="brand" href="../index.html" > 🌊 Auckland Explorer </a>
   <div class="nav-links">
-    <a href="index.html"> Home </a>
-  <a href="explore.html"> Explore </a>
-<a href="chat.html"> AI Explorer </a>
-<a href="contact.html"> Contact </a>
+    <a href="../index.html"> Home </a>
+  <a href="../explore.html"> Explore </a>
+<a href="../chat.html"> AI Explorer </a>
+<a href="../contact.html"> Contact </a>
 </div>
 </nav>
-<button
-    class="back-button"
-    type="button"
-    onclick="goBack()"
->
-    ← Back
-</button>
-<script>
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = "index.html";
-        }
-    }
-</script>
 <main class="container">
+<a class="back-button" href="../explore.html">← Back</a>
   <section class="section">
     <div class="section-title">
-      <p> GREEN SPACES OF TĀMAKI MAKAURAU </p>
-    <h1> Explore Auckland <span class="gradient-text"> parks. </span>
-    </h1>
-    <p> Discover green spaces, regional parks, walking areas and some of Auckland's most significant natural landscapes. </p>
-</div>
-<div id="placesGrid" class="places-grid" >
-</div>
+      <p>GREEN SPACES OF TĀMAKI MAKAURAU</p>
+      <h1>Explore Auckland <span class="gradient-text">parks.</span></h1>
+      <p>Choose a region to discover Auckland's parks and green spaces.</p>
+    </div>
+    <div class="places-grid region-grid">
+      <a href="parks-east.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>East Auckland</h2><p>Explore parks and reserves across East Auckland.</p><span class="btn btn-secondary">Explore region →</span></a>
+      <a href="parks-west.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>West Auckland</h2><p>Discover regional parks and native forest in West Auckland.</p><span class="btn btn-secondary">Explore region →</span></a>
+      <a href="parks-south.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>South Auckland</h2><p>Find parks, reserves, and gardens across South Auckland.</p><span class="btn btn-secondary">Explore region →</span></a>
+      <a href="parks-north.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>North Shore</h2><p>Explore green spaces along the North Shore and Hibiscus Coast.</p><span class="btn btn-secondary">Explore region →</span></a>
+      <a href="parks-central.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>Central Auckland</h2><p>Visit city parks, gardens, and urban reserves.</p><span class="btn btn-secondary">Explore region →</span></a>
+      <a href="parks-hauraki.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>Hauraki Coast</h2><p>Discover regional parks across the Hauraki Gulf mainland coast.</p><span class="btn btn-secondary">Explore region →</span></a>
+      <a href="parks-gulf.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>Gulf Islands</h2><p>Explore island parks and reserves in the Hauraki Gulf.</p><span class="btn btn-secondary">Explore region →</span></a>
+    </div>
 </section>
 </main>
-<!-- LOCATION POPUP -->
-<div id="locationPopup" class="location-popup" >
-  <div class="location-popup-card">
-    <button id="closeLocationPopup" class="close-location-popup" type="button" aria-label="Close map" > × </button>
-  <p class="popup-label"> LOCATION </p>
-<h2 id="popupPlaceName"> Destination </h2>
-<p id="popupDistance"> Getting your location... </p>
-<div id="destinationMap" aria-label="Destination map" >
-</div>
-<a id="googleMapsLink" class="btn btn-primary" href="#" target="_blank" rel="noopener" > Open directions → </a>
-</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" >
-</script>
-<script src="parks.js">
-</script>
-</body>
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
+</body>
 </html>

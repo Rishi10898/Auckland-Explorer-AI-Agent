@@ -528,6 +528,187 @@ textarea {
     white-space: nowrap;
 }
 
+.distance-badge[hidden] {
+    display: none;
+}
+
 .distance-badge.loading {
     opacity: 0.7;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+}
+
+.location-consent-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 20px;
+    margin: 0 auto 28px;
+    padding: 16px 20px;
+}
+
+.location-consent-panel h2,
+.location-consent-panel p {
+    margin: 0;
+}
+
+.location-consent-panel h2 {
+    font-size: 1.15rem;
+}
+
+.location-consent-panel #userLocationName {
+    margin-top: 4px;
+    font-size: 0.9rem;
+}
+
+.location-consent-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+
+.location-consent-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+.location-consent-controls input {
+    accent-color: var(--cyan);
+}
+
+.location-consent-controls .btn {
+    min-height: 42px;
+    padding: 9px 14px;
+    font: inherit;
+}
+
+.location-consent-controls .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.location-consent-note,
+.location-status {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.location-hint {
+    margin: -16px 0 24px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.location-hint:empty {
+    display: none;
+}
+
+.text-link {
+    color: var(--cyan);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.destination-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 18px;
+}
+
+.destination-card {
+    display: flex;
+    flex-direction: column;
+    height: 360px;
+    min-height: 360px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.destination-card .place-region {
+    margin: 0 0 8px;
+}
+
+.destination-card h2 {
+    display: -webkit-box;
+    min-height: 2.5em;
+    margin: 0 0 10px;
+    overflow: hidden;
+    font-size: 1.2rem;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.destination-description {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--muted);
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+}
+
+.destination-card-footer {
+    display: grid;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.destination-card .destination-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+}
+
+.destination-card .destination-actions .btn {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.destination-card .distance-badge {
+    justify-self: start;
+    max-width: 100%;
+    min-height: 36px;
+    padding: 7px 10px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    font-size: 0.82rem;
+}
+
+.region-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.region-link-card {
+    display: flex;
+    min-height: 200px;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.region-link-card .btn {
+    margin-top: auto;
+}
+
+@media (max-width: 700px) {
+    .location-consent-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .location-consent-controls {
+        justify-content: flex-start;
+    }
 }

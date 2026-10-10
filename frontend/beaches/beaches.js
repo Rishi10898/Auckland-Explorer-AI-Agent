@@ -1,33 +1,5 @@
 const PLACES = [
     {
-        name: "Piha Beach",
-        region: "West Auckland",
-        lat: -36.953,
-        lon: 174.468,
-        image: "https://www.newzealand.com/assets/Tourism-NZ/Auckland/img-1536201939-3159-8823-717CA83C-0811-08A9-5BCA19BBB934D606__ExtRewriteWyJqcGciLCJ3ZWJwIl0_aWxvdmVrZWxseQo_FocalPointCropWzExMDAsMzIwMCw0MCw2Niw3NSwid2VicCIsNjUsMi41XQ.webp",
-        points: [
-            "Iconic black-sand west coast beach.",
-            "Popular for coastal scenery and surfing.",
-            "Great base for exploring the Waitākere coast.",
-        ],
-        info: "Piha is one of Auckland's best-known west coast beaches, surrounded by dramatic coastal scenery.",
-        council: "https://www.newzealand.com/us/piha/",
-    },
-    {
-        name: "Muriwai Beach",
-        region: "West Auckland",
-        lat: -36.832,
-        lon: 174.443,
-        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHk8MzDG2yRJ-zmg-l4KvyccFuQyFdqaBgOUZp3i3SNw&s=10",
-        points: [
-            "Spectacular black-sand coastline.",
-            "Known for dramatic cliffs and coastal views.",
-            "Gateway to Muriwai Regional Park.",
-        ],
-        info: "Muriwai is a rugged west coast destination with black-sand beaches, trails and coastal viewpoints.",
-        council: "https://www.newzealand.com/nz/muriwai/",
-    },
-    {
         name: "Mission Bay",
         region: "Central Auckland",
         lat: -36.8485,
@@ -80,20 +52,6 @@ const PLACES = [
         council: "https://www.aucklandnz.com/explore/karekare-beach",
     },
     {
-        name: "Bethells Beach",
-        region: "West Auckland",
-        lat: -36.858,
-        lon: 174.465,
-        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTI27tDomzXECZrAdxh2YBf_9kUrg8bOzRbxXSoOg0Xgw&s=10",
-        points: [
-            "Beautiful black-sand beach.",
-            "Strong west coast scenery.",
-            "Popular for walks and coastal exploration.",
-        ],
-        info: "Bethells Beach is a scenic west coast destination surrounded by native landscape.",
-        council: "https://www.aucklandnz.com/explore/bethells-beach",
-    },
-    {
         name: "Orewa Beach",
         region: "North Shore",
         lat: -36.586,
@@ -102,20 +60,6 @@ const PLACES = [
         points: ["Long sandy coastline.", "Popular for walking and cycling.", "Close to Orewa town centre."],
         info: "Orewa Beach provides an accessible coastal destination north of Auckland.",
         council: "https://www.aucklandnz.com/explore/orewa-beach",
-    },
-    {
-        name: "Cornwallis Beach",
-        region: "West Auckland",
-        lat: -36.997,
-        lon: 174.635,
-        image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQv3p66f8U5E2ViNvclpmVgIAWVwmgYaqLgXMyeNRpW1A&s=10",
-        points: [
-            "Sheltered Manukau Harbour setting.",
-            "Good for picnics and swimming.",
-            "Historic Cornwallis Wharf nearby.",
-        ],
-        info: "Cornwallis is a popular family-oriented spot on the Manukau Harbour.",
-        council: "https://www.cornwallis.org.nz/activities",
     },
     {
         name: "Maraetai Beach",
