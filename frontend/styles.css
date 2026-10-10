@@ -175,7 +175,8 @@ body[class*="theme-"] .nav { background:var(--theme-card); color:var(--theme-tex
 body[class*="theme-"] .nav-links { color:var(--theme-muted); }
 body[class*="theme-"] .btn-secondary { background:var(--theme-bg); color:var(--theme-text); }
 body[class*="theme-"] .card,
-body[class*="theme-"] .page-tool-button { background:var(--theme-card); color:var(--theme-text); }
+body[class*="theme-"] .page-tool-button,
+body[class*="theme-"] .theme-select { background:var(--theme-card); color:var(--theme-text); }
 body.theme-dark .card,
 body.theme-dark .page-tool-button { border-color:#374151; }
 body.theme-dark .place-description,
