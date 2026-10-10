@@ -6,29 +6,7 @@
     <title>Beaches · Auckland Explorer</title>
   <!-- Website CSS -->
   <link rel="stylesheet" href="../styles.css" >
-  <style>
-    .page-tools { display:flex; justify-content:flex-end; gap:.5rem; align-items:center; padding:.8rem 0; }
-    .page-tool-button { border:1px solid rgba(100,116,139,.35); border-radius:999px; padding:.4rem .65rem; background:var(--card-bg,#fff); color:inherit; font:inherit; font-size:.85rem; cursor:pointer; }
-    .theme-control { position:relative; width:2.25rem; height:2.25rem; }
-    .theme-toggle { width:100%; height:100%; padding:0; display:inline-grid; place-items:center; font-size:1.1rem; }
-    .theme-select { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
-    .header-location-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
-    .header-location { flex:none; border:1px solid rgba(100,116,139,.3); border-radius:999px; padding:.45rem .8rem; background:rgba(100,116,139,.08); font-size:.88rem; }
-    body { --theme-bg:#f8fafc; --theme-card:#fff; --theme-text:#0f172a; --theme-accent:#0284c7; background:var(--theme-bg); color:var(--theme-text); }
-    body.theme-dark { --theme-bg:#111827; --theme-card:#1f2937; --theme-text:#e5e7eb; --theme-accent:#38bdf8; }
-    body.theme-ocean { --theme-bg:#e0f2fe; --theme-card:#f0f9ff; --theme-text:#082f49; --theme-accent:#0284c7; }
-    body.theme-sunset { --theme-bg:#fff7ed; --theme-card:#ffedd5; --theme-text:#7c2d12; --theme-accent:#ea580c; }
-    body.theme-forest { --theme-bg:#f0fdf4; --theme-card:#dcfce7; --theme-text:#14532d; --theme-accent:#16a34a; }
-    body.theme-lavender { --theme-bg:#faf5ff; --theme-card:#f3e8ff; --theme-text:#581c87; --theme-accent:#9333ea; }
-    body .card, body .location-popup-card, body .page-tool-button { background:var(--theme-card); color:var(--theme-text); }
-    body.theme-dark .card, body.theme-dark .location-popup-card, body.theme-dark .page-tool-button { border-color:#374151; }
-    body.theme-dark .place-description, body.theme-dark .place-region, body.theme-dark .section-title p { color:#cbd5e1; }
-    body.theme-dark .header-location { background:#1f2937; border-color:#4b5563; }
-    body:not(.theme-dark) .header-location { background:var(--theme-card); }
-    .theme-control:focus-within .theme-toggle, .page-tool-button:focus-visible { outline:2px solid var(--theme-accent); outline-offset:2px; }
-    @media (max-width:600px) { .page-tools { justify-content:center; flex-wrap:wrap; } .header-location-row { align-items:flex-start; flex-direction:column; } }
-  </style>
-</head>
+  </head>
 <body data-destination-category="beaches" data-destination-region="north">
   <!-- ===================================================== NAVIGATION ===================================================== -->
   <nav class="nav">
@@ -40,15 +18,6 @@
 <a href="../contact.html"> Contact </a>
 </div>
 </nav>
-<div class="container page-tools" aria-label="Page preferences">
-  <div class="theme-control" title="Choose color theme">
-    <button class="page-tool-button theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" tabindex="-1">🌙</button>
-    <label class="visually-hidden" for="themeSelect"></label>
-    <select class="theme-select" id="themeSelect" aria-label="Color theme">
-    <option value="light">Light</option><option value="dark">Dark</option><option value="ocean">Ocean</option><option value="sunset">Sunset</option><option value="forest">Forest</option><option value="lavender">Lavender</option>
-    </select>
-  </div>
-</div>
 <!-- ===================================================== MAIN CONTENT ===================================================== -->
 <main class="container">
 <a class="back-button" href="beaches.html">← Back</a>
@@ -67,28 +36,7 @@
 <!-- ===================================================== FOOTER ===================================================== -->
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
 <!-- ===================================================== SCRIPTS ===================================================== -->
-<script>
-  // Keep the last approved position locally so a refresh or tab change does not
-  // trigger another browser location prompt.
-  const savedThemeKey = "aucklandExplorerTheme";
-
-  const themeToggle = document.getElementById("themeToggle");
-  const themeSelect = document.getElementById("themeSelect");
-  function setTheme(theme) {
-    const supportedThemes = ["light", "dark", "ocean", "sunset", "forest", "lavender"];
-    if (!supportedThemes.includes(theme)) theme = "light";
-    document.body.classList.remove("theme-dark", "theme-ocean", "theme-sunset", "theme-forest", "theme-lavender");
-    if (theme !== "light") document.body.classList.add(`theme-${theme}`);
-    themeToggle.textContent = theme === "dark" ? "☀️" : "🌙";
-    themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
-    themeToggle.setAttribute("aria-pressed", String(theme === "dark"));
-    themeSelect.value = theme;
-    localStorage.setItem(savedThemeKey, theme);
-  }
-  setTheme(localStorage.getItem(savedThemeKey) || "light");
-  themeToggle.addEventListener("click", () => setTheme(themeSelect.value === "dark" ? "light" : "dark"));
-  themeSelect.addEventListener("change", () => setTheme(themeSelect.value));
-</script>
+<script src="../theme.js"></script>
 <script src="../destinations.js"></script>
 </body>
 </html>

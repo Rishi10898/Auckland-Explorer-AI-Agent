@@ -1,4 +1,4 @@
-// Coordinates feed road routing; map links use destination names, not raw pins.
+// Each regional entry supplies a display name and road-routing pin; island entries require a ferry.
 const DESTINATION_REGIONS = {
   beaches: {
     east: [
@@ -30,11 +30,11 @@ const DESTINATION_REGIONS = {
       ["Karioitahi Beach", -37.2480, 174.6880],
       ["Weymouth Beach", -36.9400, 174.8780],
       ["Big Bay", -37.1580, 174.6760],
-      ["Maraetai Beach", -36.8834, 175.0165],
-      ["Omana Regional Park Beach", -36.8875, 175.0470],
-      ["Umupuia Beach", -36.8918, 175.0860],
-      ["Beachlands Beach", -36.8827, 175.0060],
-      ["Kawakawa Bay Beach", -36.9650, 175.1470],
+      ["Orua Bay Beach", -37.0479, 174.6112],
+      ["Ōrere Point Beach", -36.9566, 175.2366],
+      ["Te Ihu-a-Mataoho Beach", -37.0030, 174.7623],
+      ["Saint Anne's Bay Beach", -37.0542, 174.8797],
+      ["Hills Beach", -37.0497, 174.8945],
       ["Grahams Beach", -37.1420, 174.6940],
     ],
     north: [
@@ -113,13 +113,13 @@ const DESTINATION_REGIONS = {
     ],
     south: [
       ["Ambury Regional Park", -36.9266, 174.7556],
-      ["Maungawhau / Mount Eden Domain", -36.8780, 174.7640],
+      ["Auckland Botanic Gardens", -37.0090, 174.9070],
       ["Tōtara Park", -37.0100, 174.9000],
       ["Puhinui Reserve", -37.0050, 174.8870],
       ["Ōtuataua Stonefields", -36.9980, 174.7860],
       ["Awhitu Regional Park", -37.0840, 174.6950],
-      ["Waitawa Regional Park", -36.9630, 175.1250],
-      ["Te Puru Park", -36.9120, 175.0110],
+      ["Bruce Pulman Park", -37.0435, 174.9425],
+      ["Massey Park", -37.0640, 174.9478],
       ["Clevedon Scenic Reserve", -36.9990, 175.0000],
       ["Hingaia Park", -37.0540, 174.9160],
     ],
@@ -144,7 +144,7 @@ const DESTINATION_REGIONS = {
       ["Myers Park", -36.8560, 174.7614],
       ["Grey Lynn Park", -36.8585, 174.7334],
       ["Point Erin Park", -36.8336, 174.7362],
-      ["Auckland Botanic Gardens", -37.0090, 174.9070],
+      ["Parnell Rose Garden", -36.8507, 174.7863],
       ["One Tree Hill Domain", -36.9006, 174.7846],
     ],
     hauraki: [
@@ -276,6 +276,18 @@ const CATEGORY_DETAILS = {
   attractions: ["attractions", "attraction", "Attraction"],
 };
 
+const OFFICIAL_INFO = {
+  "Mission Bay": "https://www.aucklandnz.com/explore/mission-bay",
+  "Takapuna Beach": "https://www.aucklandnz.com/explore/takapuna-beach",
+  "Karekare Beach": "https://www.aucklandnz.com/explore/karekare-beach",
+  "Orewa Beach": "https://www.aucklandnz.com/explore/orewa-beach",
+  "Maraetai Beach": "https://www.aucklandnz.com/explore/maraetai-beach",
+  "Auckland War Memorial Museum": "https://www.aucklandmuseum.com/",
+  "Auckland Art Gallery": "https://www.aucklandartgallery.com/",
+  "Auckland Zoo": "https://www.aucklandzoo.co.nz/",
+  MOTAT: "https://www.motat.nz/",
+};
+
 (() => {
   const page = document.body;
   const grid = document.querySelector(".places-grid");
@@ -286,9 +298,16 @@ const CATEGORY_DETAILS = {
   const places = DESTINATION_REGIONS[category]?.[region];
   const regionDetails = REGION_DETAILS[region];
   const categoryDetails = CATEGORY_DETAILS[category];
-  if (!places || !regionDetails || !categoryDetails) {
+  // Fail closed so incomplete or duplicated regional lists are not presented as complete.
+  if (
+    !places ||
+    places.length !== 10 ||
+    new Set(places.map(([name]) => name)).size !== places.length ||
+    !regionDetails ||
+    !categoryDetails
+  ) {
     grid.textContent = "Destinations are not available for this region.";
-    console.error("Unknown destination page configuration.", { category, region });
+    console.error("Invalid destination page configuration.", { category, region });
     return;
   }
 
@@ -317,25 +336,29 @@ const CATEGORY_DETAILS = {
   })[character]);
 
   grid.innerHTML = places.map(([name, lat, lon, ferryRequired = false], index) => {
-    const directions = new URL("https://www.google.com/maps/dir/");
-    directions.searchParams.set("api", "1");
-    directions.searchParams.set("destination", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
-    directions.searchParams.set("travelmode", ferryRequired ? "transit" : "driving");
+    const map = new URL("https://www.google.com/maps/search/");
+    map.searchParams.set("api", "1");
+    map.searchParams.set("query", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
+    const info = OFFICIAL_INFO[name] ||
+      `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(`${name} Auckland`)}`;
     return `
       <article class="card destination-card">
         <p class="place-region">${safeText(regionDetails[0])} · ${safeText(categoryDetails[2])}</p>
         <h2>${index + 1}. ${safeText(name)}</h2>
+        <img class="destination-image" alt="${safeText(name)}" loading="lazy" decoding="async" hidden>
         <p class="destination-description">${safeText(getDescription(category, regionDetails[0]))}</p>
         <div class="destination-card-footer">
-          <span class="distance-badge" data-destination="${safeText(name)}" data-lat="${lat}" data-lng="${lon}" data-ferry="${ferryRequired}"${ferryRequired ? "" : " hidden"}>Calculating driving distance…</span>
+          <span class="distance-badge" data-destination="${safeText(name)}" data-lat="${lat}" data-lng="${lon}" data-ferry="${ferryRequired}" hidden>Calculating driving distance…</span>
           <div class="destination-actions">
-            <a class="btn btn-secondary" href="${directions.href}" target="_blank" rel="noopener noreferrer">Directions</a>
+            <a class="btn btn-secondary" href="${map.href}" target="_blank" rel="noopener noreferrer">View on map</a>
+            <a class="btn btn-secondary info-link" href="${info}" target="_blank" rel="noopener noreferrer">More info</a>
           </div>
         </div>
       </article>
     `;
   }).join("");
 
+  loadDestinationMedia(Array.from(grid.querySelectorAll(".destination-card")));
   function getDescription(kind, area) {
     if (kind === "beaches") return `A coastal destination in ${area}. Check tide, water-quality, and surf conditions before visiting.`;
     if (kind === "parks") return `A public green space in ${area}. Check local notices for track access and conditions.`;
@@ -344,6 +367,92 @@ const CATEGORY_DETAILS = {
 
   initializeDistances(locationNotice);
 })();
+
+// Wikipedia articles provide links and thumbnails; Commons fills any missing image slots.
+async function loadDestinationMedia(cards) {
+  for (let index = 0; index < cards.length; index += 3) {
+    await Promise.all(cards.slice(index, index + 3).map(async (card) => {
+      const title = card.querySelector("h2").textContent.replace(/^\d+\.\s*/, "");
+      const placeWords = mediaMatchWords(title);
+      const query = new URLSearchParams({
+        action: "query",
+        generator: "search",
+        gsrsearch: `${title} Auckland New Zealand`,
+        gsrnamespace: "0",
+        gsrlimit: "5",
+        prop: "pageimages|info",
+        piprop: "thumbnail",
+        pithumbsize: "640",
+        inprop: "url",
+        format: "json",
+        origin: "*",
+      });
+      try {
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?${query}`);
+        if (!response.ok) throw new Error(`Image search returned HTTP ${response.status}.`);
+        const result = await response.json();
+        const articles = Object.values(result.query?.pages || {});
+        const article = articles.find((candidate) =>
+          mediaTitleMatches(candidate.title, placeWords)
+        );
+        if (article?.fullurl) {
+          const articleUrl = new URL(article.fullurl);
+          if (articleUrl.hostname === "wikipedia.org" || articleUrl.hostname.endsWith(".wikipedia.org")) {
+            card.querySelector(".info-link").href = articleUrl.href;
+          }
+        }
+        const mediaQuery = new URLSearchParams({
+          action: "query",
+          generator: "search",
+          gsrsearch: `"${title}" Auckland`,
+          gsrnamespace: "6",
+          gsrlimit: "10",
+          prop: "imageinfo",
+          iiprop: "url",
+          iiurlwidth: "640",
+          format: "json",
+          origin: "*",
+        });
+        const mediaResponse = await fetch(`https://commons.wikimedia.org/w/api.php?${mediaQuery}`);
+        if (!mediaResponse.ok) throw new Error(`Image search returned HTTP ${mediaResponse.status}.`);
+        const media = await mediaResponse.json();
+        const imagePage = Object.values(media.query?.pages || {})
+          .filter((candidate) => mediaTitleMatches(candidate.title, placeWords))
+          .sort((a, b) => mediaTitleScore(a.title, placeWords) - mediaTitleScore(b.title, placeWords))[0];
+        const imageUrl = imagePage?.imageinfo?.[0]?.thumburl || article?.thumbnail?.source;
+        const image = card.querySelector(".destination-image");
+        if (imageUrl) {
+          image.src = imageUrl;
+          image.addEventListener("error", () => { image.hidden = true; }, { once: true });
+          image.hidden = false;
+        }
+      } catch (error) {
+        console.warn(`Could not load destination media for ${title}.`, error);
+      }
+    }));
+  }
+}
+
+function mediaMatchWords(title) {
+  const generic = new Set([
+    "auckland", "beach", "coast", "domain", "gardens", "island",
+    "new", "park", "regional", "reserve", "zealand",
+  ]);
+  return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ")
+    .trim().split(/\s+/).filter((word) => word && !generic.has(word));
+}
+
+function mediaTitleMatches(candidate, placeWords) {
+  const titleWords = new Set(mediaMatchWords(candidate));
+  return placeWords.length > 0 && placeWords.every((word) => titleWords.has(word));
+}
+
+function mediaTitleScore(title, placeWords) {
+  const words = mediaMatchWords(title);
+  const unrelated = /\b(map|diagram|locator|location)\b/i.test(title) ? 100 : 0;
+  return unrelated + words.length - placeWords.length;
+}
 
 async function initializeDistances(locationNotice) {
   const distanceBadges = Array.from(document.querySelectorAll(".distance-badge[data-lat][data-lng]"));
@@ -364,14 +473,12 @@ async function initializeDistances(locationNotice) {
     }
   } catch {
     locationNotice.innerHTML = 'Set your location on the <a class="text-link" href="../explore.html">Explore page</a> to see driving distances.';
-    distanceBadges.filter((badge) => badge.dataset.ferry !== "true").forEach((badge) => {
-      badge.hidden = true;
-    });
+    distanceBadges.forEach((badge) => { badge.hidden = true; });
     return;
   }
 
   locationNotice.textContent = `Driving distances from ${location.areaName || "your current location"}.`;
-  if (!location.areaName) updateLocationName(location, locationNotice);
+  updateLocationName(location, locationNotice);
 
   distanceBadges.forEach((badge) => {
     badge.hidden = false;
@@ -393,15 +500,18 @@ async function updateLocationName(location, notice) {
     format: "jsonv2",
     lat: location.latitude,
     lon: location.longitude,
-    zoom: "14",
+    zoom: "16",
     addressdetails: "1",
   });
   try {
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`);
     if (!response.ok) throw new Error(`Location name service returned HTTP ${response.status}.`);
     const { address = {} } = await response.json();
-    const areaName = address.neighbourhood || address.suburb || address.village ||
-      address.town || address.city || address.county;
+    const locality = address.suburb || address.city_district || address.village ||
+      address.town || address.neighbourhood || address.city;
+    const areaName = [locality, address.city || address.municipality || address.county]
+      .filter((part, index, parts) => part && parts.indexOf(part) === index)
+      .join(", ");
     if (!areaName) return;
 
     location.areaName = areaName;
