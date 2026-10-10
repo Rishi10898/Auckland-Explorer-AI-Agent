@@ -1,3 +1,4 @@
+![](https://komarev.com/ghpvc/?username=Rishi10898)
 🧾 Project Title
 
 Auckland Explorer — Context-Aware Decision System for Local Travel
