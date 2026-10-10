@@ -27,21 +27,24 @@
       format: "jsonv2",
       lat: location.latitude,
       lon: location.longitude,
-      zoom: "14",
+      zoom: "16",
       addressdetails: "1",
     });
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`);
       if (!response.ok) throw new Error("Location name lookup failed");
-      const result = await response.json();
-      const address = result.address || {};
-      const area = address.neighbourhood || address.suburb || address.village ||
-        address.town || address.city || address.county;
+      const { address = {} } = await response.json();
+      const locality = address.suburb || address.city_district || address.village ||
+        address.town || address.neighbourhood || address.city;
+      const area = [locality, address.city || address.municipality || address.county]
+        .filter((part, index, parts) => part && parts.indexOf(part) === index)
+        .join(", ");
       if (area) {
         location.areaName = area;
         localStorage.setItem(locationKey, JSON.stringify(location));
       }
       name.textContent = area ? `Your location · ${area}` : "Your current location";
+      status.textContent = `GPS accuracy ±${Math.round(location.accuracy || 0)} m.`;
     } catch (error) {
       name.textContent = "Your current location";
       status.textContent = "Location is saved, but its area name could not be found.";
@@ -58,6 +61,7 @@
 
     if (hasConsent && location) {
       name.textContent = "Finding your area…";
+      status.textContent = `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
       updateLocationName(location);
     } else if (!hasConsent) {
       name.textContent = "Location sharing is off";
@@ -79,6 +83,7 @@
         const location = readLocation();
         if (location) {
           name.textContent = "Finding your area…";
+          status.textContent = `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
           updateLocationName(location);
         }
       }

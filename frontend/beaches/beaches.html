@@ -21,6 +21,14 @@
 <!-- ===================================================== MAIN CONTENT ===================================================== -->
 <main class="container">
 <a class="back-button" href="../explore.html">← Back</a>
+<div class="page-tools" aria-label="Page appearance">
+  <button class="page-tool-button" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙</button>
+  <label class="visually-hidden" for="themeSelect">Color theme</label>
+  <select class="theme-select" id="themeSelect" data-theme-select>
+    <option value="light">Light</option><option value="dark">Dark</option><option value="ocean">Ocean</option>
+    <option value="sunset">Sunset</option><option value="forest">Forest</option><option value="lavender">Lavender</option>
+  </select>
+</div>
   <section class="section">
     <!-- PAGE HEADER -->
     <div class="section-title">
@@ -29,7 +37,7 @@
     </h1>
     <p> Discover some of Auckland's most popular coastal destinations, from black-sand west coast beaches to waterfront locations around the Hauraki Gulf. </p>
 </div>
-<p class="location-hint">Set your location once on the <a class="text-link" href="../explore.html">Explore page</a> to see driving distances on destination pages.</p>
+<p class="location-hint">Set your location once on the <a class="text-link" href="../explore.html">Explore page</a> (explore.html) to see driving distances on destination pages.</p>
 <!-- BEACH REGIONS -->
 <div class="places-grid">
 
@@ -129,5 +137,6 @@
 </main>
 <!-- ===================================================== FOOTER ===================================================== -->
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
+<script src="../theme.js"></script>
 </body>
 </html>

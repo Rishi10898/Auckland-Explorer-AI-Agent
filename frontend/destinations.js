@@ -276,6 +276,18 @@ const CATEGORY_DETAILS = {
   attractions: ["attractions", "attraction", "Attraction"],
 };
 
+const OFFICIAL_INFO = {
+  "Mission Bay": "https://www.aucklandnz.com/explore/mission-bay",
+  "Takapuna Beach": "https://www.aucklandnz.com/explore/takapuna-beach",
+  "Karekare Beach": "https://www.aucklandnz.com/explore/karekare-beach",
+  "Orewa Beach": "https://www.aucklandnz.com/explore/orewa-beach",
+  "Maraetai Beach": "https://www.aucklandnz.com/explore/maraetai-beach",
+  "Auckland War Memorial Museum": "https://www.aucklandmuseum.com/",
+  "Auckland Art Gallery": "https://www.aucklandartgallery.com/",
+  "Auckland Zoo": "https://www.aucklandzoo.co.nz/",
+  MOTAT: "https://www.motat.nz/",
+};
+
 (() => {
   const page = document.body;
   const grid = document.querySelector(".places-grid");
@@ -327,21 +339,26 @@ const CATEGORY_DETAILS = {
     const map = new URL("https://www.google.com/maps/search/");
     map.searchParams.set("api", "1");
     map.searchParams.set("query", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
+    const info = OFFICIAL_INFO[name] ||
+      `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(`${name} Auckland`)}`;
     return `
       <article class="card destination-card">
         <p class="place-region">${safeText(regionDetails[0])} · ${safeText(categoryDetails[2])}</p>
         <h2>${index + 1}. ${safeText(name)}</h2>
+        <img class="destination-image" alt="${safeText(name)}" loading="lazy" decoding="async" hidden>
         <p class="destination-description">${safeText(getDescription(category, regionDetails[0]))}</p>
         <div class="destination-card-footer">
           <span class="distance-badge" data-destination="${safeText(name)}" data-lat="${lat}" data-lng="${lon}" data-ferry="${ferryRequired}" hidden>Calculating driving distance…</span>
           <div class="destination-actions">
             <a class="btn btn-secondary" href="${map.href}" target="_blank" rel="noopener noreferrer">View on map</a>
+            <a class="btn btn-secondary info-link" href="${info}" target="_blank" rel="noopener noreferrer">More info</a>
           </div>
         </div>
       </article>
     `;
   }).join("");
 
+  loadDestinationMedia(Array.from(grid.querySelectorAll(".destination-card")));
   function getDescription(kind, area) {
     if (kind === "beaches") return `A coastal destination in ${area}. Check tide, water-quality, and surf conditions before visiting.`;
     if (kind === "parks") return `A public green space in ${area}. Check local notices for track access and conditions.`;
@@ -350,6 +367,67 @@ const CATEGORY_DETAILS = {
 
   initializeDistances(locationNotice);
 })();
+
+// Wikipedia articles provide links and thumbnails; Commons fills any missing image slots.
+async function loadDestinationMedia(cards) {
+  for (let index = 0; index < cards.length; index += 3) {
+    await Promise.all(cards.slice(index, index + 3).map(async (card) => {
+      const title = card.querySelector("h2").textContent.replace(/^\d+\.\s*/, "");
+      const query = new URLSearchParams({
+        action: "query",
+        generator: "search",
+        gsrsearch: `${title} Auckland New Zealand`,
+        gsrnamespace: "0",
+        gsrlimit: "1",
+        prop: "pageimages|info",
+        piprop: "thumbnail",
+        pithumbsize: "640",
+        inprop: "url",
+        format: "json",
+        origin: "*",
+      });
+      try {
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?${query}`);
+        if (!response.ok) throw new Error(`Image search returned HTTP ${response.status}.`);
+        const result = await response.json();
+        const article = Object.values(result.query?.pages || {})[0];
+        if (article?.fullurl) {
+          const articleUrl = new URL(article.fullurl);
+          if (articleUrl.hostname === "wikipedia.org" || articleUrl.hostname.endsWith(".wikipedia.org")) {
+            card.querySelector(".info-link").href = articleUrl.href;
+          }
+        }
+        const image = card.querySelector(".destination-image");
+        let imageUrl = article?.thumbnail?.source;
+        if (!imageUrl) {
+          const mediaQuery = new URLSearchParams({
+            action: "query",
+            generator: "search",
+            gsrsearch: `filetype:bitmap ${title} Auckland New Zealand`,
+            gsrnamespace: "6",
+            gsrlimit: "1",
+            prop: "imageinfo",
+            iiprop: "url",
+            iiurlwidth: "640",
+            format: "json",
+            origin: "*",
+          });
+          const mediaResponse = await fetch(`https://commons.wikimedia.org/w/api.php?${mediaQuery}`);
+          if (!mediaResponse.ok) throw new Error(`Image fallback returned HTTP ${mediaResponse.status}.`);
+          const media = await mediaResponse.json();
+          imageUrl = Object.values(media.query?.pages || {})[0]?.imageinfo?.[0]?.thumburl;
+        }
+        if (imageUrl) {
+          image.src = imageUrl;
+          image.addEventListener("error", () => { image.hidden = true; }, { once: true });
+          image.hidden = false;
+        }
+      } catch (error) {
+        console.warn(`Could not load destination media for ${title}.`, error);
+      }
+    }));
+  }
+}
 
 async function initializeDistances(locationNotice) {
   const distanceBadges = Array.from(document.querySelectorAll(".distance-badge[data-lat][data-lng]"));
@@ -375,7 +453,7 @@ async function initializeDistances(locationNotice) {
   }
 
   locationNotice.textContent = `Driving distances from ${location.areaName || "your current location"}.`;
-  if (!location.areaName) updateLocationName(location, locationNotice);
+  updateLocationName(location, locationNotice);
 
   distanceBadges.forEach((badge) => {
     badge.hidden = false;
@@ -397,15 +475,18 @@ async function updateLocationName(location, notice) {
     format: "jsonv2",
     lat: location.latitude,
     lon: location.longitude,
-    zoom: "14",
+    zoom: "16",
     addressdetails: "1",
   });
   try {
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`);
     if (!response.ok) throw new Error(`Location name service returned HTTP ${response.status}.`);
     const { address = {} } = await response.json();
-    const areaName = address.neighbourhood || address.suburb || address.village ||
-      address.town || address.city || address.county;
+    const locality = address.suburb || address.city_district || address.village ||
+      address.town || address.neighbourhood || address.city;
+    const areaName = [locality, address.city || address.municipality || address.county]
+      .filter((part, index, parts) => part && parts.indexOf(part) === index)
+      .join(", ");
     if (!areaName) return;
 
     location.areaName = areaName;

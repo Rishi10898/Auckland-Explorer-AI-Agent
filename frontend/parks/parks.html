@@ -18,12 +18,21 @@
 </nav>
 <main class="container">
 <a class="back-button" href="../explore.html">← Back</a>
+<div class="page-tools" aria-label="Page appearance">
+  <button class="page-tool-button" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙</button>
+  <label class="visually-hidden" for="themeSelect">Color theme</label>
+  <select class="theme-select" id="themeSelect" data-theme-select>
+    <option value="light">Light</option><option value="dark">Dark</option><option value="ocean">Ocean</option>
+    <option value="sunset">Sunset</option><option value="forest">Forest</option><option value="lavender">Lavender</option>
+  </select>
+</div>
   <section class="section">
     <div class="section-title">
       <p>GREEN SPACES OF TĀMAKI MAKAURAU</p>
       <h1>Explore Auckland <span class="gradient-text">parks.</span></h1>
       <p>Choose a region to discover Auckland's parks and green spaces.</p>
     </div>
+    <p class="location-hint">Set your location once on the <a class="text-link" href="../explore.html">Explore page</a> (explore.html) to see driving distances on destination pages.</p>
     <div class="places-grid region-grid">
       <a href="parks-east.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>East Auckland</h2><p>Explore parks and reserves across East Auckland.</p><span class="btn btn-secondary">Explore region →</span></a>
       <a href="parks-west.html" class="card region-link-card"><p class="place-region">PARKS</p><h2>West Auckland</h2><p>Discover regional parks and native forest in West Auckland.</p><span class="btn btn-secondary">Explore region →</span></a>
@@ -36,5 +45,6 @@
 </section>
 </main>
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
+<script src="../theme.js"></script>
 </body>
 </html>
