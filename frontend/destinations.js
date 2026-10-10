@@ -401,29 +401,26 @@ async function loadDestinationMedia(cards) {
             card.querySelector(".info-link").href = articleUrl.href;
           }
         }
+        const mediaQuery = new URLSearchParams({
+          action: "query",
+          generator: "search",
+          gsrsearch: `"${title}" Auckland`,
+          gsrnamespace: "6",
+          gsrlimit: "10",
+          prop: "imageinfo",
+          iiprop: "url",
+          iiurlwidth: "640",
+          format: "json",
+          origin: "*",
+        });
+        const mediaResponse = await fetch(`https://commons.wikimedia.org/w/api.php?${mediaQuery}`);
+        if (!mediaResponse.ok) throw new Error(`Image search returned HTTP ${mediaResponse.status}.`);
+        const media = await mediaResponse.json();
+        const imagePage = Object.values(media.query?.pages || {})
+          .filter((candidate) => mediaTitleMatches(candidate.title, placeWords))
+          .sort((a, b) => mediaTitleScore(a.title, placeWords) - mediaTitleScore(b.title, placeWords))[0];
+        const imageUrl = imagePage?.imageinfo?.[0]?.thumburl || article?.thumbnail?.source;
         const image = card.querySelector(".destination-image");
-        let imageUrl = article?.thumbnail?.source || null;
-        if (!imageUrl) {
-          const mediaQuery = new URLSearchParams({
-            action: "query",
-            generator: "search",
-            gsrsearch: `"${title}" Auckland`,
-            gsrnamespace: "6",
-            gsrlimit: "5",
-            prop: "imageinfo",
-            iiprop: "url",
-            iiurlwidth: "640",
-            format: "json",
-            origin: "*",
-          });
-          const mediaResponse = await fetch(`https://commons.wikimedia.org/w/api.php?${mediaQuery}`);
-          if (!mediaResponse.ok) throw new Error(`Image fallback returned HTTP ${mediaResponse.status}.`);
-          const media = await mediaResponse.json();
-          const imagePage = Object.values(media.query?.pages || {}).find((candidate) =>
-            mediaTitleMatches(candidate.title, placeWords)
-          );
-          imageUrl = imagePage?.imageinfo?.[0]?.thumburl || null;
-        }
         if (imageUrl) {
           image.src = imageUrl;
           image.addEventListener("error", () => { image.hidden = true; }, { once: true });
@@ -449,6 +446,12 @@ function mediaMatchWords(title) {
 function mediaTitleMatches(candidate, placeWords) {
   const titleWords = new Set(mediaMatchWords(candidate));
   return placeWords.length > 0 && placeWords.every((word) => titleWords.has(word));
+}
+
+function mediaTitleScore(title, placeWords) {
+  const words = mediaMatchWords(title);
+  const unrelated = /\b(map|diagram|locator|location)\b/i.test(title) ? 100 : 0;
+  return unrelated + words.length - placeWords.length;
 }
 
 async function initializeDistances(locationNotice) {
