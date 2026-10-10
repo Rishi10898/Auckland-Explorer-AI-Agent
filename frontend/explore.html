@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Explore Auckland</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,22 +17,7 @@
 </div>
 </nav>
 <main class="container">
-<button
-    class="back-button"
-    type="button"
-    onclick="goBack()"
->
-    ← Back
-</button>
-<script>
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = "index.html";
-        }
-    }
-</script>
+<a class="back-button" href="index.html">← Back</a>
   <!-- HERO -->
   <section class="section">
     <div class="section-title">
@@ -50,6 +34,22 @@
 <p> Tell the AI what you want, your preferred transport, budget and location. </p>
 </div>
 </section>
+<section class="card location-consent-panel" aria-labelledby="locationConsentTitle">
+  <div>
+    <h2 id="locationConsentTitle">Distances from your location</h2>
+    <p id="userLocationName" aria-live="polite">Location sharing is off</p>
+  </div>
+  <div class="location-consent-controls">
+    <label for="locationConsent">
+      <input id="locationConsent" type="checkbox">
+      <span>Consent to location use</span>
+    </label>
+    <button class="btn btn-primary" id="shareLocation" type="button" disabled>Share my location</button>
+  </div>
+  <p class="location-consent-note">Location is saved in this browser and used to find your area name and driving distances. Distances are provided by OpenStreetMap routing.</p>
+  <p class="location-status" id="locationStatus" role="status" aria-live="polite"></p>
+</section>
+<section class="section">
 <div class="grid">
   <article class="card">
     <div class="card-icon">🏖️</div>
@@ -73,11 +73,6 @@
 </section>
 </main>
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
-<script src="places.js">
-</script>
-<script src="explore.js">
-</script>
+<script src="location.js"></script>
 </body>
 </html>

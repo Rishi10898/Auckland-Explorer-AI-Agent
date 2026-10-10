@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1" >
     <title>Beaches · Auckland Explorer</title>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" >
   <!-- Website CSS -->
   <link rel="stylesheet" href="../styles.css" >
   <style>
@@ -31,7 +29,7 @@
     @media (max-width:600px) { .page-tools { justify-content:center; flex-wrap:wrap; } .header-location-row { align-items:flex-start; flex-direction:column; } }
   </style>
 </head>
-<body>
+<body data-destination-category="beaches" data-destination-region="east">
   <!-- ===================================================== NAVIGATION ===================================================== -->
   <nav class="nav">
     <a class="brand" href="../index.html" > 🌊 Auckland Explorer </a>
@@ -42,7 +40,7 @@
 <a href="../contact.html"> Contact </a>
 </div>
 </nav>
-<div class="container page-tools" aria-label="Page preferences and location">
+<div class="container page-tools" aria-label="Page preferences">
   <div class="theme-control" title="Choose color theme">
     <button class="page-tool-button theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" tabindex="-1">🌙</button>
     <label class="visually-hidden" for="themeSelect"></label>
@@ -50,279 +48,29 @@
     <option value="light">Light</option><option value="dark">Dark</option><option value="ocean">Ocean</option><option value="sunset">Sunset</option><option value="forest">Forest</option><option value="lavender">Lavender</option>
     </select>
   </div>
-  <button class="page-tool-button" id="changeLocation" type="button" title="Update your location">📍 Location</button>
 </div>
 <!-- ===================================================== MAIN CONTENT ===================================================== -->
 <main class="container">
-<button
-    class="back-button"
-    type="button"
-    onclick="goBack()"
->
-    ← Back
-</button>
-<script>
-    function goBack() {
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            window.location.href = "index.html";
-        }
-    }
-</script>
+<a class="back-button" href="beaches.html">← Back</a>
   <section class="section">
     <!-- PAGE HEADER -->
     <div class="section-title">
       <p> EAST AUCKLAND COASTLINE </p>
     <h1> Explore East Auckland <span class="gradient-text"> beaches. </span>
     </h1>
-    <div class="header-location-row">
-      <p> Discover beaches and coastal destinations along East Auckland's Hauraki Gulf shoreline. </p>
-      <span class="header-location" id="userLocationLabel" aria-live="polite">Location not set</span>
-    </div>
+    <p> Discover beaches and coastal destinations along East Auckland's Hauraki Gulf shoreline. </p>
 </div>
 <!-- EAST AUCKLAND BEACHES -->
-<div class="places-grid">
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Eastern Beach</h2>
-      <p class="place-description">
-        A classic family beach with calm water, a promenade, and easy swimming access.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Eastern+Beach+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Eastern Beach" data-lat="-36.8858" data-lng="174.8716">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Bucklands Beach</h2>
-      <p class="place-description">
-        A relaxed seaside suburb with a long sandy frontage and sweeping harbour views.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Bucklands+Beach+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Bucklands Beach" data-lat="-36.8565" data-lng="174.9068">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Half Moon Bay</h2>
-      <p class="place-description">
-        Enjoy a scenic harbour-side beach, marina views, and the coastline around the bay.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Half+Moon+Bay+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Half Moon Bay" data-lat="-36.8876" data-lng="174.9009">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Howick Beach</h2>
-      <p class="place-description">
-        Visit a peaceful shoreline near Howick village and the historic township.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Howick+Beach+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Howick Beach" data-lat="-36.8964" data-lng="174.9305">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Cockle Bay</h2>
-      <p class="place-description">
-        A favourite local shoreline with a broad beach, coastal reserve, and easy access.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Cockle+Bay+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Cockle Bay" data-lat="-36.8914" data-lng="174.9436">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Maraetai Beach</h2>
-      <p class="place-description">
-        Relax by the water, enjoy long views across the gulf, and explore the nearby foreshore.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Maraetai+Beach+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Maraetai Beach" data-lat="-36.8834" data-lng="175.0165">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Ōmana Beach</h2>
-      <p class="place-description">
-        A classic East Auckland beach with wide sand, parkland, and a laid-back coastal vibe.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Omana+Beach+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Omana Beach" data-lat="-36.8817" data-lng="175.0425">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="card place-card">
-    <div class="place-card-content">
-      <p class="place-region">EAST AUCKLAND</p>
-      <h2>Duder's Beach</h2>
-      <p class="place-description">
-        A quieter coastal escape with sweeping views, picnic spots, and a more rugged shoreline.
-      </p>
-      <div class="destination-actions">
-        <a class="btn btn-secondary" href="https://www.google.com/maps/search/?api=1&query=Duder's+Beach+Auckland" target="_blank" rel="noopener">View on map →</a>
-        <span class="distance-badge" data-destination="Duder's Beach" data-lat="-36.8790" data-lng="175.1010">Getting distance...</span>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="places-grid"></div>
 </section>
 </main>
-<!-- ===================================================== LOCATION POPUP ===================================================== -->
-<div id="locationPopup" class="location-popup" >
-  <div class="location-popup-card">
-    <!-- CLOSE BUTTON -->
-    <button id="closeLocationPopup" class="close-location-popup" type="button" aria-label="Close map" > × </button>
-  <p class="popup-label"> LOCATION </p>
-<h2 id="popupPlaceName"> Destination </h2>
-<p id="popupDistance"> Getting your location... </p>
-<!-- LEAFLET MAP -->
-<div id="destinationMap" >
-</div>
-<!-- GOOGLE MAPS DIRECTIONS -->
-<a id="googleMapsLink" class="btn btn-primary" href="#" target="_blank" rel="noopener" > Open directions → </a>
-</div>
-</div>
 <!-- ===================================================== FOOTER ===================================================== -->
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
 <!-- ===================================================== SCRIPTS ===================================================== -->
-<!-- Leaflet must load BEFORE beaches.js -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" >
-</script>
-<script src="beaches.js" >
-</script>
 <script>
   // Keep the last approved position locally so a refresh or tab change does not
   // trigger another browser location prompt.
-  const eastBeachBadges = document.querySelectorAll(
-    ".distance-badge[data-lat][data-lng]"
-  );
-  const radians = (degrees) => degrees * Math.PI / 180;
-  const savedLocationKey = "aucklandExplorerUserLocation";
   const savedThemeKey = "aucklandExplorerTheme";
-  const locationLabel = document.getElementById("userLocationLabel");
-
-  function straightLineDistanceKm(latitude, longitude, destinationLatitude, destinationLongitude) {
-    const latitudeDifference = radians(destinationLatitude - latitude);
-    const longitudeDifference = radians(destinationLongitude - longitude);
-    const a = Math.sin(latitudeDifference / 2) ** 2
-      + Math.cos(radians(latitude)) * Math.cos(radians(destinationLatitude))
-      * Math.sin(longitudeDifference / 2) ** 2;
-    const boundedA = Math.min(1, Math.max(0, a));
-    return 6371.0088 * 2 * Math.atan2(Math.sqrt(boundedA), Math.sqrt(1 - boundedA));
-  }
-
-  function formatBeachDistance(distanceKm) {
-    return distanceKm < 1
-      ? `${Math.round(distanceKm * 1000)} m away`
-      : `${distanceKm.toFixed(1)} km away`;
-  }
-
-  async function updateBeachDistances(location) {
-    const { latitude, longitude, accuracy } = location;
-    await Promise.all(Array.from(eastBeachBadges, async (badge) => {
-      const destinationLatitude = Number(badge.dataset.lat);
-      const destinationLongitude = Number(badge.dataset.lng);
-      const fallbackKm = straightLineDistanceKm(latitude, longitude, destinationLatitude, destinationLongitude);
-      try {
-        const coordinates = `${longitude},${latitude};${destinationLongitude},${destinationLatitude}`;
-        const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false`);
-        if (!response.ok) throw new Error("Route lookup failed");
-        const route = await response.json();
-        if (route.code !== "Ok" || !route.routes?.length) throw new Error("No driving route found");
-        badge.textContent = `${(route.routes[0].distance / 1000).toFixed(1)} km driving`;
-        badge.title = `Road-route distance (route may vary; no live traffic data). GPS accuracy: about ${Math.round(accuracy || 0)} m.`;
-      } catch (_) {
-        badge.textContent = `${formatBeachDistance(fallbackKm)} (straight-line)`;
-        badge.title = `Road distance unavailable; showing straight-line distance. GPS accuracy: about ${Math.round(accuracy || 0)} m.`;
-      }
-    }));
-  }
-
-  async function setLocationName(location) {
-    locationLabel.textContent = "Finding your area…";
-    try {
-      const query = new URLSearchParams({ format: "jsonv2", lat: location.latitude, lon: location.longitude, zoom: "18", addressdetails: "1" });
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`);
-      if (!response.ok) throw new Error("Location lookup failed");
-      const result = await response.json();
-      const address = result.address || {};
-      const preciseAddress = [address.house_number, address.road].filter(Boolean).join(" ");
-      const area = address.neighbourhood || address.suburb || address.village || address.town || address.city || address.county;
-      const place = [preciseAddress, area].filter(Boolean).join(", ");
-      locationLabel.textContent = place ? `Your location · ${place}` : "Your current location";
-    } catch (_) {
-      locationLabel.textContent = "Your current location";
-    }
-  }
-
-  function useLocation(location, persist = true) {
-    if (persist) localStorage.setItem(savedLocationKey, JSON.stringify(location));
-    updateBeachDistances(location);
-    setLocationName(location);
-  }
-
-  function showLocationUnavailable(message = "Location unavailable. Enable location access, then try again.") {
-    eastBeachBadges.forEach((badge) => {
-      badge.textContent = "Distance unavailable";
-      badge.title = message;
-    });
-    locationLabel.textContent = "Location not set";
-  }
-
-  function requestUserLocation() {
-    if (!navigator.geolocation) {
-      showLocationUnavailable("Geolocation is not supported by this browser.");
-      return;
-    }
-    locationLabel.textContent = "Getting your location…";
-    eastBeachBadges.forEach((badge) => { badge.textContent = "Getting distance…"; });
-    navigator.geolocation.getCurrentPosition(
-      (position) => useLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
-      () => showLocationUnavailable("Location access was unavailable. Check browser permissions and try Change location again."),
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-    );
-  }
-
-  try {
-    const savedLocation = JSON.parse(localStorage.getItem(savedLocationKey) || "null");
-    if (savedLocation && Number.isFinite(savedLocation.latitude) && Number.isFinite(savedLocation.longitude)) {
-      useLocation(savedLocation, false);
-    } else {
-      requestUserLocation();
-    }
-  } catch (_) { requestUserLocation(); }
-
-  document.getElementById("changeLocation").addEventListener("click", requestUserLocation);
 
   const themeToggle = document.getElementById("themeToggle");
   const themeSelect = document.getElementById("themeSelect");
@@ -341,5 +89,6 @@
   themeToggle.addEventListener("click", () => setTheme(themeSelect.value === "dark" ? "light" : "dark"));
   themeSelect.addEventListener("change", () => setTheme(themeSelect.value));
 </script>
+<script src="../destinations.js"></script>
 </body>
 </html>
