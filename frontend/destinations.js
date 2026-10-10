@@ -317,9 +317,9 @@ const CATEGORY_DETAILS = {
   })[character]);
 
   grid.innerHTML = places.map(([name, lat, lon, ferryRequired = false], index) => {
-    const directions = new URL("https://www.google.com/maps/dir/");
-    directions.searchParams.set("api", "1");
-    directions.searchParams.set("destination", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
+    const map = new URL("https://www.google.com/maps/search/");
+    map.searchParams.set("api", "1");
+    map.searchParams.set("query", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
     return `
       <article class="card destination-card">
         <p class="place-region">${safeText(regionDetails[0])} · ${safeText(categoryDetails[2])}</p>
@@ -328,7 +328,7 @@ const CATEGORY_DETAILS = {
         <div class="destination-card-footer">
           <span class="distance-badge" data-destination="${safeText(name)}" data-lat="${lat}" data-lng="${lon}" data-ferry="${ferryRequired}"${ferryRequired ? "" : " hidden"}>Calculating driving distance…</span>
           <div class="destination-actions">
-            <a class="btn btn-secondary" href="${directions.href}" target="_blank" rel="noopener noreferrer">Directions</a>
+            <a class="btn btn-secondary" href="${map.href}" target="_blank" rel="noopener noreferrer">View on map</a>
           </div>
         </div>
       </article>
