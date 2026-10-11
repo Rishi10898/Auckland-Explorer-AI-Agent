@@ -27,14 +27,8 @@
   </h1>
   <p> Choose a category to discover Auckland. </p>
 </div>
-<!-- AI Call to action - CTA -->
-<div class="card glow ai-cta">
-  <p>NEED SOMETHING MORE PERSONAL?</p>
-<h2> Let Auckland Explorer find the right place for you. </h2>
-<p> Tell the AI what you want, your preferred transport, budget and location. </p>
-</div>
 </section>
-<section class="card location-consent-panel" aria-labelledby="locationConsentTitle">
+<section class="card location-consent-panel" aria-labelledby="locationConsentTitle" style="padding: 12px 20px; margin: 8px 0 12px;">
   <div>
     <h2 id="locationConsentTitle">Distances from your location</h2>
     <p id="userLocationName" aria-live="polite">Location sharing is off</p>
@@ -46,8 +40,8 @@
     </label>
     <button class="btn btn-primary" id="shareLocation" type="button" disabled>Share my location</button>
   </div>
-  <p class="location-consent-note">Location is saved in this browser and used to find your area name and driving distances. Distances are provided by OpenStreetMap routing.</p>
-  <p class="location-status" id="locationStatus" role="status" aria-live="polite"></p>
+  <p class="location-consent-note" style="margin: 8px 0 0;">Location is saved in this browser and used to find your area name and driving distances. Distances are provided by OpenStreetMap routing.</p>
+  <p class="location-status" id="locationStatus" role="status" aria-live="polite" style="margin: 4px 0 0;"></p>
 </section>
 <section class="section">
 <div class="grid">
@@ -71,6 +65,12 @@
 </article>
 </div>
 </section>
+<!-- AI Call to action - CTA -->
+<div class="card glow ai-cta" style="margin-top: 48px;">
+  <p>NEED SOMETHING MORE PERSONAL?</p>
+<h2> Let Auckland Explorer find the right place for you. </h2>
+<p> Tell the AI what you want, your preferred transport, budget and location. </p>
+</div>
 </main>
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
 <script src="location.js"></script>
