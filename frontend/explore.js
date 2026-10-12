@@ -30,36 +30,47 @@ const categoryInfo = {
 
 document.addEventListener("DOMContentLoaded", () => {
     createMap();
-    showCategory("beaches");
+    if (document.getElementById("placesGrid") && typeof PLACES !== "undefined") {
+        showCategory("beaches");
 
-    document.querySelectorAll(".category-btn").forEach(button => {
-        button.addEventListener("click", () => {
-            document.querySelectorAll(".category-btn")
-                .forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".category-btn").forEach(button => {
+            button.addEventListener("click", () => {
+                document.querySelectorAll(".category-btn")
+                    .forEach(b => b.classList.remove("active"));
 
-            button.classList.add("active");
-            showCategory(button.dataset.category);
+                button.classList.add("active");
+                showCategory(button.dataset.category);
+            });
         });
-    });
+    }
 });
 
 
 /* Creates the Leaflet map. */
 function createMap() {
     const mapElement = document.getElementById("exploreMap");
-    if (!mapElement) return;
+    if (!mapElement || typeof L === "undefined") {
+        const mapStatus = document.getElementById("mapStatus");
+        if (mapStatus) mapStatus.textContent = "The map could not be loaded. Your location can still be saved.";
+        return;
+    }
 
     map = L.map("exploreMap").setView(
         [DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon],
         10
     );
 
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    const tileStatus = document.getElementById("mapTileStatus");
+    const tiles = L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         {
-            attribution: "&copy; OpenStreetMap contributors"
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }
-    ).addTo(map);
+    );
+    tiles.on("tileerror", () => {
+        if (tileStatus) tileStatus.hidden = false;
+    });
+    tiles.addTo(map);
 }
 
 
@@ -197,54 +208,38 @@ function showPlace(index) {
         )
         .openOn(map);
 }
+/* Requests, names, and maps the user's precise current location. */
+function locateUser(showMapModal = false) {
+    const status = document.getElementById("locationStatus");
+    const consent = document.getElementById("locationConsent");
+    const shareButton = document.getElementById("shareLocation");
 
-
-/* Requests the user's current location. */
-function locateUser() {
-    const status =
-        document.getElementById("locationStatus");
-
-    if (!navigator.geolocation) {
-        status.textContent =
-            "Location services are not available.";
+    if (!consent?.checked) {
+        const message = "Please consent to location use before sharing your location.";
+        if (status) status.textContent = message;
+        return;
+    }
+    if (!shareButton) {
+        if (status) status.textContent = "Location sharing is not available on this page.";
         return;
     }
 
-    status.textContent = "📍 Locating you...";
+    if (showMapModal) {
+        document.getElementById("exploreMapModal")?.classList.remove("hidden");
+        const title = document.getElementById("exploreMapTitle");
+        if (title) title.textContent = "Your location";
+    }
+    shareButton.click();
+}
 
-    navigator.geolocation.getCurrentPosition(
-        position => {
-            userLocation = {
-                lat: position.coords.latitude,
-                lon: position.coords.longitude
-            };
-
-            updateUserMarker();
-            refreshCards();
-
-            status.textContent =
-                "📍 Your location is active.";
-
-            document.getElementById("mapStatus").textContent =
-                "📍 Distances are calculated from your location.";
-        },
-
-        () => {
-            status.textContent =
-                "Unable to access your location. Check browser permissions.";
-        },
-
-        {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000
-        }
-    );
+/* Opens the map and uses the shared location flow. */
+function locateMe() {
+    locateUser(true);
 }
 
 
 /* Places the user's location on the map. */
-function updateUserMarker() {
+function updateUserMarker(locationName = "Your location") {
     if (!map || !userLocation) return;
 
     if (userMarker) {
@@ -256,13 +251,42 @@ function updateUserMarker() {
         userLocation.lon
     ])
         .addTo(map)
-        .bindPopup("📍 Your location");
+        .bindPopup(`📍 ${escapeHtml(locationName)}`);
 
     map.setView([
         userLocation.lat,
         userLocation.lon
-    ], 11);
+    ], 16);
 }
+
+function showUserLocationOnMap(latitude, longitude, locationName) {
+    userLocation = { lat: latitude, lon: longitude };
+    if (!map) createMap();
+    const mapStatus = document.getElementById("mapStatus");
+    if (!map) {
+        if (mapStatus) {
+            mapStatus.textContent =
+                `The map could not be loaded. Your location was found: ${locationName}`;
+        }
+        return;
+    }
+    updateUserMarker(locationName);
+    if (mapStatus) mapStatus.textContent = `📍 ${locationName}`;
+}
+
+function clearUserLocationFromMap() {
+    if (map) map.closePopup();
+    if (userMarker && map) map.removeLayer(userMarker);
+    userMarker = null;
+    userLocation = null;
+    if (map) {
+        map.setView([DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon], 10);
+    }
+}
+
+window.showUserLocationOnMap = showUserLocationOnMap;
+window.clearUserLocationFromMap = clearUserLocationFromMap;
+
 /* Refreshes cards after location becomes available. */
 function refreshCards() {
     const category =

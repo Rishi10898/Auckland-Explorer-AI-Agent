@@ -5,8 +5,19 @@
   const shareButton = document.getElementById("shareLocation");
   const name = document.getElementById("userLocationName");
   const status = document.getElementById("locationStatus");
+  const mapStatus = document.getElementById("mapStatus");
 
   if (!consent || !shareButton || !name || !status) return;
+
+  function showLocationOnMap(location) {
+    if (typeof window.showUserLocationOnMap === "function") {
+      window.showUserLocationOnMap(
+        location.latitude,
+        location.longitude,
+        location.displayName || location.areaName || "Your current location",
+      );
+    }
+  }
 
   function readLocation() {
     const location = JSON.parse(localStorage.getItem(locationKey) || "null");
@@ -33,21 +44,28 @@
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`);
       if (!response.ok) throw new Error("Location name lookup failed");
-      const { address = {} } = await response.json();
+      const data = await response.json();
+      const address = data.address || {};
       const locality = address.suburb || address.city_district || address.village ||
         address.town || address.neighbourhood || address.city;
       const area = [locality, address.city || address.municipality || address.county]
         .filter((part, index, parts) => part && parts.indexOf(part) === index)
         .join(", ");
+      const displayName = typeof data.display_name === "string" ? data.display_name : "";
+      if (displayName) location.displayName = displayName;
       if (area) {
         location.areaName = area;
-        localStorage.setItem(locationKey, JSON.stringify(location));
       }
-      name.textContent = area ? `Your location · ${area}` : "Your current location";
+      if (displayName || area) localStorage.setItem(locationKey, JSON.stringify(location));
+      name.textContent = `Your location · ${displayName || area || "Current location"}`;
       status.textContent = `GPS accuracy ±${Math.round(location.accuracy || 0)} m.`;
+      showLocationOnMap(location);
     } catch (error) {
-      name.textContent = "Your current location";
+      name.textContent = location.areaName
+        ? `Your location · ${location.areaName}`
+        : "Your current location";
       status.textContent = "Location is saved, but its area name could not be found.";
+      showLocationOnMap(location);
       console.error("Could not look up the saved location name.", error);
     }
   }
@@ -65,6 +83,8 @@
       updateLocationName(location);
     } else if (!hasConsent) {
       name.textContent = "Location sharing is off";
+    } else if (mapStatus) {
+      mapStatus.textContent = "Consent is on. Share your location to show it on the map.";
     }
   } catch (error) {
     status.textContent = "Could not read saved location settings in this browser.";
@@ -78,8 +98,13 @@
       if (!consent.checked) {
         name.textContent = "Location sharing is off";
         status.textContent = "Saved location distances are paused until you consent again.";
+        if (mapStatus) mapStatus.textContent = "Consent and share your location to show it on the map.";
+        if (typeof window.clearUserLocationFromMap === "function") {
+          window.clearUserLocationFromMap();
+        }
       } else {
         status.textContent = "Consent saved. Share your location or use the saved location.";
+        if (mapStatus) mapStatus.textContent = "Consent is on. Share your location to show it on the map.";
         const location = readLocation();
         if (location) {
           name.textContent = "Finding your area…";
@@ -131,6 +156,7 @@
         status.textContent = error.code === error.PERMISSION_DENIED
           ? "Location permission was denied. Allow it in your browser settings to continue."
           : "Your location could not be determined. Please try again.";
+        if (mapStatus) mapStatus.textContent = status.textContent;
         shareButton.dataset.loading = "false";
         consent.disabled = false;
         shareButton.disabled = !consent.checked;

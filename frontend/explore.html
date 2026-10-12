@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Explore Auckland</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
   <nav class="nav">
@@ -36,12 +37,21 @@
   <div class="location-consent-controls">
     <label for="locationConsent">
       <input id="locationConsent" type="checkbox">
-      <span>Consent to location use</span>
+      <span>I consent to use and save my location in this browser</span>
     </label>
     <button class="btn btn-primary" id="shareLocation" type="button" disabled>Share my location</button>
   </div>
-  <p class="location-consent-note">Location is saved in this browser and used to find your area name and driving distances. Distances are provided by OpenStreetMap routing.</p>
+  <p class="location-consent-note">Your GPS coordinates are saved in this browser. When you share your location, coordinates are sent to OpenStreetMap to find your area name and driving distances.</p>
   <p class="location-status" id="locationStatus" role="status" aria-live="polite"></p>
+</section>
+<section class="card location-map-panel" aria-labelledby="locationMapTitle">
+  <h2 id="locationMapTitle">Your location on the map</h2>
+  <p id="mapStatus" class="location-status" role="status" aria-live="polite">Consent and share your location to show it on the map.</p>
+  <div id="exploreMap" role="region" aria-label="Map showing your shared location"></div>
+  <p id="mapTileStatus" class="location-status" role="status" aria-live="polite" hidden>
+    The map tiles could not be loaded. Check your internet connection or
+    <a class="text-link" href="https://carto.com/basemaps/" target="_blank" rel="noopener">CARTO basemap availability</a>.
+  </p>
 </section>
 <section class="section">
 <div class="grid">
@@ -75,6 +85,8 @@
 </div>
 </main>
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="explore.js"></script>
 <script src="location.js"></script>
 </body>
 </html>
