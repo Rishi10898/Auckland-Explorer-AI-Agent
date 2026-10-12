@@ -612,6 +612,27 @@ textarea {
 .location-consent-panel #userLocationName {
     margin-top: 4px;
     font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.location-map-panel {
+    margin: 0 auto 28px;
+    padding: 20px;
+}
+
+.location-map-panel h2,
+.location-map-panel p {
+    margin-top: 0;
+}
+
+.location-map-panel h2 {
+    margin-bottom: 6px;
+    font-size: 1.15rem;
+}
+
+.location-map-panel #exploreMap {
+    height: min(55vh, 440px);
+    min-height: 300px;
 }
 
 .location-consent-controls {
