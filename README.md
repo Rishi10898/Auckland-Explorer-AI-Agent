@@ -1,57 +1,69 @@
 ![](https://komarev.com/ghpvc/?username=Rishi10898)
-🧾 Project Title
+**🧾 Project Title**
 
 Auckland Explorer — Context-Aware Decision System for Local Travel
 
 🧩 Problem
 
-Users struggle to decide how to spend free time due to:
+Users often struggle to decide how to spend their free time due to:
+- Too many options
+- Fragmented information
+- Lack of cost transparency
 
-too many options
-fragmented information
-lack of cost transparency
 🎯 Goal
 
-Reduce decision time by providing:
+Reduce decision-making time by providing:
+  1–3 optimized recommendations based on weather, budget, and location
 
-1–3 optimized recommendations
-based on weather, budget, and location
 🏗️ Solution
 
 A web-based system that:
 
-collects user input
-integrates APIs
-applies filtering logic
-uses AI for final decision
+- Collects user input
+- Integrates APIs
+- Applies filtering logic
+- Utilizes AI for the final decision
+
 ⚙️ Tech Stack
-Frontend: JavaScript
-Backend: Node.js
-APIs:
-Google Maps
-Weather API
-AI:
-OpenAI API
+
+- Frontend: JavaScript, CSS, HTML
+- Backend: Python
+- APIs:
+  - Google Maps
+  - TomTom API
+  - OpenWeather API
+- AI:
+  - NVIDIA API - DeepSeek v4 flash
+
 🔄 System Flow
-User input
-Fetch weather + places
-Filter options
-Estimate cost
-AI selects best option
+
+1. User input
+2. Fetch weather and places
+3. Filter options
+4. Estimate cost
+5. AI selects the best option
+
 📊 Key Features
-Context-aware recommendations
-Cost breakdown
-Reduced decision fatigue
+
+- Context-aware recommendations
+- Cost breakdown
+- Reduced decision fatigue
+
 ⚠️ Challenges
-API complexity
-AI reliability
-time constraints
+
+- API complexity
+- AI reliability
+- Time constraints
+
 📈 Impact
-Faster decision-making
-increased local exploration
-supports sustainable travel
+
+- Faster decision-making
+- Increased local exploration
+- Support for sustainable travel
+
 🔍 Reflection
-Trade-offs between accuracy and simplicity
-importance of structured data for AI
-real-world system design experience
+
+- Trade-offs between accuracy and simplicity
+- Importance of structured data for AI
+- Valuable real-world system design experience
 ![](https://komarev.com/ghpvc/?username=Rishi10898)
