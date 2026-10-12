@@ -67,4 +67,3 @@ A web-based system that:
 - Trade-offs between accuracy and simplicity
 - Importance of structured data for AI
 - Valuable real-world system design experience
-![](https://komarev.com/ghpvc/?username=Rishi10898)
