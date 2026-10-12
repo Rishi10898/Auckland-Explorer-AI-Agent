@@ -630,9 +630,15 @@ textarea {
     font-size: 1.15rem;
 }
 
+.location-map-panel .location-map-hint {
+    margin-bottom: 12px;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
 .location-map-panel #exploreMap {
-    height: min(55vh, 440px);
-    min-height: 300px;
+    height: min(65vh, 560px);
+    min-height: 340px;
 }
 
 .location-consent-controls {
