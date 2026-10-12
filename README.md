@@ -2,7 +2,7 @@
 
 🧾 Project Title
 
-Auckland Explorer — Context-Aware Decision System for Local Travel
+Auckland Explorer - Context-Aware Decision System for Local Travel
 
 🧩 Problem
 
