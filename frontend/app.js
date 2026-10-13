@@ -59,8 +59,8 @@ function initialiseMap() {
     );
 
     L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }
+        "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+        { maxNativeZoom: 19, maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>' }
     ).addTo(map);
 }
 

@@ -62,9 +62,11 @@ function createMap() {
 
     const tileStatus = document.getElementById("mapTileStatus");
     const tiles = L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
         {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            maxNativeZoom: 19,
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
         }
     );
     tiles.on("tileerror", () => {
@@ -249,17 +251,30 @@ function updateUserMarker(locationName = "Your location") {
     userMarker = L.marker([
         userLocation.lat,
         userLocation.lon
-    ])
+    ], {
+        draggable: document.getElementById("locationConsent")?.checked === true
+    })
         .addTo(map)
-        .bindPopup(`📍 ${escapeHtml(locationName)}`);
+        .bindPopup(`📍 ${escapeHtml(locationName)}<br>Drag this pin to adjust your starting point.`);
+
+    userMarker.on("dragend", () => {
+        const adjusted = userMarker.getLatLng();
+        userLocation = { lat: adjusted.lat, lon: adjusted.lng };
+        userMarker.setPopupContent("📍 Adjusted location<br>Checking the area name…");
+
+        if (typeof window.saveAdjustedUserLocation === "function") {
+            window.saveAdjustedUserLocation(adjusted.lat, adjusted.lng);
+        }
+    });
 
     map.setView([
         userLocation.lat,
         userLocation.lon
-    ], 16);
+    ], Math.min(map.getMaxZoom(), Math.max(map.getZoom(), 18)));
 }
 
 function showUserLocationOnMap(latitude, longitude, locationName) {
+    if (document.getElementById("locationConsent")?.checked !== true) return;
     userLocation = { lat: latitude, lon: longitude };
     if (!map) createMap();
     const mapStatus = document.getElementById("mapStatus");

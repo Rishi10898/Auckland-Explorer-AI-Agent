@@ -182,8 +182,10 @@ function getUserLocation() {
 function openMap(n, a) {
     destinationMap ||
         ((destinationMap = L.map("destinationMap")),
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
+            maxNativeZoom: 19,
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
         }).addTo(destinationMap)),
         userMarker && destinationMap.removeLayer(userMarker),
         placeMarker && destinationMap.removeLayer(placeMarker),

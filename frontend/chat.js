@@ -98,8 +98,10 @@ function openMap() {
     mapModal.classList.add("active"),
         map ||
             ((map = L.map("exploreMap")),
-            L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
+                maxNativeZoom: 19,
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
             }).addTo(map)),
         updateMap(),
         setTimeout(() => map.invalidateSize(), 100);
