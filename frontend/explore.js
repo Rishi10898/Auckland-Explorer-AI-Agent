@@ -55,24 +55,30 @@ function createMap() {
         return;
     }
 
-    map = L.map("exploreMap").setView(
+    map = L.map("exploreMap", {
+        maxZoom: 19,
+        scrollWheelZoom: true,
+        doubleClickZoom: true,
+        keyboard: true
+    }).setView(
         [DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lon],
         10
     );
 
     const tileStatus = document.getElementById("mapTileStatus");
     const tiles = L.tileLayer(
-        "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
         {
             maxNativeZoom: 19,
             maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+            attribution: 'Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, and the GIS User Community'
         }
     );
     tiles.on("tileerror", () => {
         if (tileStatus) tileStatus.hidden = false;
     });
     tiles.addTo(map);
+    L.control.scale({ imperial: false }).addTo(map);
 }
 
 
@@ -270,7 +276,7 @@ function updateUserMarker(locationName = "Your location") {
     map.setView([
         userLocation.lat,
         userLocation.lon
-    ], Math.min(map.getMaxZoom(), Math.max(map.getZoom(), 18)));
+    ], 18);
 }
 
 function showUserLocationOnMap(latitude, longitude, locationName) {
