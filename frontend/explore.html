@@ -15,9 +15,24 @@
   <a href="explore.html" class="active">Explore</a>
 <a href="chat.html">AI Explorer</a>
 <a href="contact.html">Contact</a>
-</div>
-</nav>
-<main class="container">
+  </div>
+  </nav>
+  <div class="theme-controls-row">
+    <div class="theme-picker" data-theme-picker>
+      <button class="theme-picker-trigger" data-theme-menu-trigger type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open appearance options">🌙</button>
+      <div class="theme-picker-menu" data-theme-menu role="group" aria-label="Appearance options" hidden>
+        <button class="theme-picker-toggle" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙 <span>Toggle light / dark</span></button>
+        <span class="theme-picker-label">Choose a color</span>
+        <button class="theme-option" data-theme-option="light" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-light"></span>Light</button>
+        <button class="theme-option" data-theme-option="dark" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-dark"></span>Dark</button>
+        <button class="theme-option" data-theme-option="ocean" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-ocean"></span>Ocean</button>
+        <button class="theme-option" data-theme-option="sunset" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-sunset"></span>Sunset</button>
+        <button class="theme-option" data-theme-option="forest" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-forest"></span>Forest</button>
+        <button class="theme-option" data-theme-option="lavender" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-lavender"></span>Lavender</button>
+      </div>
+    </div>
+  </div>
+  <main class="container">
 <a class="back-button" href="index.html">← Back</a>
   <!-- HERO -->
   <section class="section">
@@ -51,7 +66,7 @@
   <div id="exploreMap" role="region" aria-label="Map showing your shared location"></div>
   <p id="mapTileStatus" class="location-status" role="status" aria-live="polite" hidden>
     The map tiles could not be loaded. Check your internet connection or
-    <a class="text-link" href="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer" target="_blank" rel="noopener">ArcGIS World Street Map service</a>.
+    <a class="text-link" href="https://www.openstreetmap.de/" target="_blank" rel="noopener">OpenStreetMap.de tile service</a>.
   </p>
 </section>
 <section class="section">
@@ -89,5 +104,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="explore.js"></script>
 <script src="location.js"></script>
+<script src="theme.js"></script>
 </body>
 </html>

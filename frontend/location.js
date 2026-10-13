@@ -6,6 +6,9 @@
   const name = document.getElementById("userLocationName");
   const status = document.getElementById("locationStatus");
   const mapStatus = document.getElementById("mapStatus");
+  let reverseLookupTimer;
+  let reverseLookupId = 0;
+  let reverseLookupController;
 
   if (!consent || !shareButton || !name || !status) return;
 
@@ -34,6 +37,9 @@
   }
 
   async function updateLocationName(location) {
+    const lookupId = ++reverseLookupId;
+    reverseLookupController?.abort();
+    reverseLookupController = new AbortController();
     const query = new URLSearchParams({
       format: "jsonv2",
       lat: location.latitude,
@@ -42,9 +48,13 @@
       addressdetails: "1",
     });
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${query}`,
+        { signal: reverseLookupController.signal },
+      );
       if (!response.ok) throw new Error("Location name lookup failed");
       const data = await response.json();
+      if (lookupId !== reverseLookupId) return;
       const address = data.address || {};
       const locality = address.suburb || address.city_district || address.village ||
         address.town || address.neighbourhood || address.city;
@@ -58,9 +68,12 @@
       }
       if (displayName || area) localStorage.setItem(locationKey, JSON.stringify(location));
       name.textContent = `Your location · ${displayName || area || "Current location"}`;
-      status.textContent = `GPS accuracy ±${Math.round(location.accuracy || 0)} m.`;
+      status.textContent = location.manuallyAdjusted
+        ? "Manually adjusted map location saved. Driving distances use this point."
+        : `GPS accuracy ±${Math.round(location.accuracy || 0)} m.`;
       showLocationOnMap(location);
     } catch (error) {
+      if (lookupId !== reverseLookupId) return;
       name.textContent = location.areaName
         ? `Your location · ${location.areaName}`
         : "Your current location";
@@ -69,6 +82,44 @@
       console.error("Could not look up the saved location name.", error);
     }
   }
+
+  function saveAdjustedLocation(latitude, longitude) {
+    if (!consent.checked) return;
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 ||
+      Math.abs(longitude) > 180
+    ) {
+      status.textContent = "The adjusted map location is invalid and was not saved.";
+      return;
+    }
+
+    const location = readLocation() || {};
+    location.latitude = latitude;
+    location.longitude = longitude;
+    location.manuallyAdjusted = true;
+    delete location.accuracy;
+    delete location.areaName;
+    delete location.displayName;
+
+    try {
+      reverseLookupId += 1;
+      localStorage.setItem(locationKey, JSON.stringify(location));
+      name.textContent = "Finding the adjusted location name…";
+      status.textContent = "Adjusted location saved. Looking up its area name…";
+      if (mapStatus) mapStatus.textContent = "📍 Adjusted starting point saved; distances will use this location.";
+      window.dispatchEvent(new CustomEvent("auckland-explorer-location-change"));
+
+      clearTimeout(reverseLookupTimer);
+      reverseLookupTimer = setTimeout(() => updateLocationName(location), 1100);
+    } catch (error) {
+      status.textContent = "The adjusted location could not be saved in this browser.";
+      console.error("Could not save the adjusted location.", error);
+    }
+  }
+
+  window.saveAdjustedUserLocation = saveAdjustedLocation;
 
   try {
     const hasConsent = localStorage.getItem(consentKey) === "true";
@@ -79,7 +130,9 @@
 
     if (hasConsent && location) {
       name.textContent = "Finding your area…";
-      status.textContent = `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
+      status.textContent = location.manuallyAdjusted
+        ? "Using your manually adjusted map location."
+        : `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
       updateLocationName(location);
     } else if (!hasConsent) {
       name.textContent = "Location sharing is off";
@@ -96,6 +149,9 @@
       localStorage.setItem(consentKey, String(consent.checked));
       shareButton.disabled = !consent.checked || shareButton.dataset.loading === "true";
       if (!consent.checked) {
+        clearTimeout(reverseLookupTimer);
+        reverseLookupId += 1;
+        reverseLookupController?.abort();
         name.textContent = "Location sharing is off";
         status.textContent = "Saved location distances are paused until you consent again.";
         if (mapStatus) mapStatus.textContent = "Consent and share your location to show it on the map.";
@@ -108,7 +164,9 @@
         const location = readLocation();
         if (location) {
           name.textContent = "Finding your area…";
-          status.textContent = `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
+          status.textContent = location.manuallyAdjusted
+            ? "Using your manually adjusted map location."
+            : `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
           updateLocationName(location);
         }
       }
@@ -141,6 +199,7 @@
           localStorage.setItem(consentKey, "true");
           name.textContent = "Finding your area…";
           status.textContent = `Location saved in this browser (GPS accuracy ±${Math.round(location.accuracy)} m).`;
+          delete location.manuallyAdjusted;
           updateLocationName(location);
           shareButton.textContent = "Change my location";
         } catch (error) {

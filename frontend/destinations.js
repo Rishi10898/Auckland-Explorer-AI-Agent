@@ -288,6 +288,9 @@ const OFFICIAL_INFO = {
   MOTAT: "https://www.motat.nz/",
 };
 
+let activeLocationNotice = null;
+let distanceCalculationVersion = 0;
+
 (() => {
   const page = document.body;
   const grid = document.querySelector(".places-grid");
@@ -326,6 +329,7 @@ const OFFICIAL_INFO = {
   locationNotice.className = "location-hint";
   locationNotice.setAttribute("aria-live", "polite");
   sectionTitle?.after(locationNotice);
+  activeLocationNotice = locationNotice;
 
   const safeText = (value) => value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -367,6 +371,35 @@ const OFFICIAL_INFO = {
 
   initializeDistances(locationNotice);
 })();
+
+window.addEventListener("storage", (event) => {
+  if (!activeLocationNotice) return;
+  if (event.key === "aucklandExplorerUserLocation" && event.newValue) {
+    try {
+      const previous = event.oldValue ? JSON.parse(event.oldValue) : null;
+      const current = JSON.parse(event.newValue);
+      if (
+        previous &&
+        previous.latitude === current.latitude &&
+        previous.longitude === current.longitude
+      ) {
+        activeLocationNotice.textContent =
+          `Driving distances from ${current.areaName || "your current location"}.`;
+        return;
+      }
+    } catch (error) {
+      console.error("Could not read the updated saved location.", error);
+    }
+  }
+  if (event.key === "aucklandExplorerUserLocation" ||
+      event.key === "aucklandExplorerLocationConsent") {
+    void initializeDistances(activeLocationNotice);
+  }
+});
+
+window.addEventListener("auckland-explorer-location-change", () => {
+  if (activeLocationNotice) void initializeDistances(activeLocationNotice);
+});
 
 // Wikipedia articles provide links and thumbnails; Commons fills any missing image slots.
 async function loadDestinationMedia(cards) {
@@ -455,6 +488,7 @@ function mediaTitleScore(title, placeWords) {
 }
 
 async function initializeDistances(locationNotice) {
+  const calculationVersion = ++distanceCalculationVersion;
   const distanceBadges = Array.from(document.querySelectorAll(".distance-badge[data-lat][data-lng]"));
   let location;
   try {
@@ -491,7 +525,9 @@ async function initializeDistances(locationNotice) {
   const roadDestinations = distanceBadges.filter((badge) => badge.dataset.ferry !== "true");
   // Batch requests to avoid flooding the public routing service.
   for (let index = 0; index < roadDestinations.length; index += 3) {
-    await Promise.all(roadDestinations.slice(index, index + 3).map((badge) => fetchDrivingDistance(badge, location)));
+    await Promise.all(roadDestinations.slice(index, index + 3).map((badge) =>
+      fetchDrivingDistance(badge, location, calculationVersion)
+    ));
   }
 }
 
@@ -522,7 +558,7 @@ async function updateLocationName(location, notice) {
   }
 }
 
-async function fetchDrivingDistance(badge, location) {
+async function fetchDrivingDistance(badge, location, calculationVersion) {
   const destinationLatitude = Number(badge.dataset.lat);
   const destinationLongitude = Number(badge.dataset.lng);
   if (
@@ -546,6 +582,7 @@ async function fetchDrivingDistance(badge, location) {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) throw new Error(`Driving-distance service returned HTTP ${response.status}.`);
     const result = await response.json();
+    if (calculationVersion !== distanceCalculationVersion) return;
     if (
       result.code !== "Ok" ||
       !result.routes?.length ||
@@ -560,14 +597,19 @@ async function fetchDrivingDistance(badge, location) {
     );
     if (snapsTooFar) throw new Error("The destination is too far from a mapped road for a reliable driving distance.");
     badge.textContent = `Approx. ${(result.routes[0].distance / 1000).toFixed(1)} km driving`;
-    badge.title = `Road distance from your saved location, rounded to 0.1 km. GPS accuracy: ±${Math.round(location.accuracy || 0)} m.`;
+    badge.title = location.manuallyAdjusted
+      ? "Road distance from your manually adjusted map location, rounded to 0.1 km."
+      : `Road distance from your saved location, rounded to 0.1 km. GPS accuracy: ±${Math.round(location.accuracy || 0)} m.`;
   } catch (error) {
+    if (calculationVersion !== distanceCalculationVersion) return;
     badge.textContent = "Driving route unavailable";
     badge.title = error.name === "AbortError"
       ? "Driving-distance lookup timed out. Try again later."
       : error.message || "Could not retrieve a driving route.";
   } finally {
     clearTimeout(timeout);
-    badge.classList.remove("loading");
+    if (calculationVersion === distanceCalculationVersion) {
+      badge.classList.remove("loading");
+    }
   }
 }

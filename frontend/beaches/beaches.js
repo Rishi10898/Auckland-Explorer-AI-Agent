@@ -164,9 +164,10 @@ function createMap(a, n) {
     destinationMap && destinationMap.remove(),
         (t.innerHTML = ""),
         (destinationMap = L.map("destinationMap")),
-        L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+        L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
+            maxNativeZoom: 19,
             maxZoom: 19,
-            attribution: 'Sources: Esri, HERE, Garmin, USGS, Intermap, INCREMENT P, NRCan, Esri Japan, METI, Esri China (Hong Kong), Esri Korea, Esri (Thailand), NGCC, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, and the GIS User Community',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
         }).addTo(destinationMap);
     const e = [n.latitude, n.longitude],
         o = [a.lat, a.lon];
