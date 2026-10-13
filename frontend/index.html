@@ -14,19 +14,24 @@
   <a href="explore.html">Explore</a>
 <a href="chat.html">AI Explorer</a>
 <a href="contact.html">Contact</a>
-</div>
-</nav>
-<div class="container">
-  <div class="page-tools" aria-label="Site appearance">
-    <button class="page-tool-button" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙</button>
-    <label class="visually-hidden" for="homeThemeSelect">Color theme</label>
-    <select class="theme-select" id="homeThemeSelect" data-theme-select>
-      <option value="light">Light</option><option value="dark">Dark</option><option value="ocean">Ocean</option>
-      <option value="sunset">Sunset</option><option value="forest">Forest</option><option value="lavender">Lavender</option>
-    </select>
   </div>
-</div>
-<main>
+  </nav>
+  <div class="theme-controls-row">
+    <div class="theme-picker" data-theme-picker>
+      <button class="theme-picker-trigger" data-theme-menu-trigger type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open appearance options">🌙</button>
+      <div class="theme-picker-menu" data-theme-menu role="group" aria-label="Appearance options" hidden>
+        <button class="theme-picker-toggle" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙 <span>Toggle light / dark</span></button>
+        <span class="theme-picker-label">Choose a color</span>
+        <button class="theme-option" data-theme-option="light" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-light"></span>Light</button>
+        <button class="theme-option" data-theme-option="dark" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-dark"></span>Dark</button>
+        <button class="theme-option" data-theme-option="ocean" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-ocean"></span>Ocean</button>
+        <button class="theme-option" data-theme-option="sunset" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-sunset"></span>Sunset</button>
+        <button class="theme-option" data-theme-option="forest" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-forest"></span>Forest</button>
+        <button class="theme-option" data-theme-option="lavender" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-lavender"></span>Lavender</button>
+      </div>
+    </div>
+  </div>
+  <main>
   <section class="hero">
     <div class="container">
       <p>AI-POWERED TĀMAKI MAKAURAU</p>
