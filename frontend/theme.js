@@ -1,20 +1,22 @@
 (() => {
   const key = "aucklandExplorerTheme";
   const themes = ["light", "dark", "ocean", "sunset", "forest", "lavender"];
-  const button = document.querySelector("[data-theme-toggle]");
-  const select = document.querySelector("[data-theme-select]");
+  const buttons = document.querySelectorAll("[data-theme-toggle]");
+  const selects = document.querySelectorAll("[data-theme-select]");
 
-  function applyTheme(theme) {
+  function applyTheme(theme, persist = true) {
     const selected = themes.includes(theme) ? theme : "light";
     document.body.classList.remove(...themes.map((name) => `theme-${name}`));
     document.body.classList.add(`theme-${selected}`);
-    if (select) select.value = selected;
-    if (button) {
+    selects.forEach((select) => { select.value = selected; });
+    buttons.forEach((button) => {
       const dark = selected === "dark";
       button.textContent = dark ? "☀️" : "🌙";
       button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
       button.setAttribute("aria-pressed", String(dark));
-    }
+    });
+    if (!persist) return;
+
     try {
       localStorage.setItem(key, selected);
     } catch (error) {
@@ -28,8 +30,19 @@
   } catch (error) {
     console.error("Could not read the saved theme.", error);
   }
-  applyTheme(savedTheme);
+  applyTheme(savedTheme, false);
 
-  button?.addEventListener("click", () => applyTheme(select?.value === "dark" ? "light" : "dark"));
-  select?.addEventListener("change", () => applyTheme(select.value));
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const selected = document.body.classList.contains("theme-dark") ? "light" : "dark";
+      applyTheme(selected);
+    });
+  });
+  selects.forEach((select) => {
+    select.addEventListener("change", () => applyTheme(select.value));
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === key) applyTheme(event.newValue || "light", false);
+  });
 })();

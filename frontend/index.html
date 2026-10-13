@@ -16,6 +16,16 @@
 <a href="contact.html">Contact</a>
 </div>
 </nav>
+<div class="container">
+  <div class="page-tools" aria-label="Site appearance">
+    <button class="page-tool-button" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙</button>
+    <label class="visually-hidden" for="homeThemeSelect">Color theme</label>
+    <select class="theme-select" id="homeThemeSelect" data-theme-select>
+      <option value="light">Light</option><option value="dark">Dark</option><option value="ocean">Ocean</option>
+      <option value="sunset">Sunset</option><option value="forest">Forest</option><option value="lavender">Lavender</option>
+    </select>
+  </div>
+</div>
 <main>
   <section class="hero">
     <div class="container">
@@ -67,5 +77,6 @@
 </section>
 </main>
 <footer class="footer"> Auckland Explorer · Tāmaki Makaurau </footer>
+<script src="theme.js"></script>
 </body>
 </html>
