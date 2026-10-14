@@ -67,3 +67,13 @@ A web-based system that:
 - Trade-offs between accuracy and simplicity
 - Importance of structured data for AI
 - Valuable real-world system design experience
+
+## GitHub Pages deployment
+
+GitHub Pages serves the static files in `frontend/`; the FastAPI backend is not
+run by Pages. The included [`render.yaml`](./render.yaml) configures the API as
+a Render web service. In Render, create a Blueprint from this repository and
+provide `NVIDIA_API_KEY`, `OPEN_WEATHER_API_KEY`, and `TOMTOM_API_KEY` when
+prompted. After deployment, the frontend uses
+`https://auckland-explorer-ai-agent-api.onrender.com/api/chat`. The local
+backend URL is used when the site is opened on `localhost` or `127.0.0.1`.
