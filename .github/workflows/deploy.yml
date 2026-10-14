@@ -29,8 +29,8 @@ jobs:
       - name: Upload Frontend Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # This line tells GitHub to ONLY upload and deploy frontend directory
-          path: './frontend'
+          # Upload all files recursively, preserving frontend subdirectory paths.
+          path: './frontend/**/*'
 
       - name: Deploy to GitHub Pages
         id: deployment
