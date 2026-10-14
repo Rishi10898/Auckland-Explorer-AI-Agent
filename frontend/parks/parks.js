@@ -210,7 +210,9 @@ function degreesToRadians(n) {
     return (n * Math.PI) / 180;
 }
 function askAI(n) {
-    window.location.href = `chat.html?place=${encodeURIComponent(n)}`;
+    const chatUrl = new URL("../chat.html", window.location.href);
+    chatUrl.searchParams.set("place", n);
+    window.location.href = chatUrl;
 }
 document.addEventListener("DOMContentLoaded", () => {
     renderPlaces(), setupPopup();

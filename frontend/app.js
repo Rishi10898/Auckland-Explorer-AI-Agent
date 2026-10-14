@@ -10,14 +10,14 @@
  * - Structured error handling
  */
 
-const API_URL = "http://127.0.0.1:8000/api/chat";
+const API_URL = window.AUCKLAND_EXPLORER_API_URL;
 
 const DEFAULT_LOCATION = {
     latitude: -36.8485,
     longitude: 174.7633
 };
 
-let location = { ...DEFAULT_LOCATION };
+let userLocation = { ...DEFAULT_LOCATION };
 let map;
 let marker;
 
@@ -55,7 +55,7 @@ if (place && input) {
 /* Creates the interactive map used by the AI Explorer. */
 function initialiseMap() {
     map = L.map("exploreMap").setView(
-        [location.latitude, location.longitude], 13
+        [userLocation.latitude, userLocation.longitude], 13
     );
 
     L.tileLayer(
@@ -87,13 +87,13 @@ function locateMe() {
 
 /* Updates application state and the map marker. */
 function updateLocation(newLocation) {
-    location = newLocation;
+    userLocation = newLocation;
 
     const label = document.getElementById("geoLabel");
 
     if (label) {
         label.textContent =
-            `📍 ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+            `📍 ${userLocation.latitude.toFixed(5)}, ${userLocation.longitude.toFixed(5)}`;
     }
 
     if (!map) return;
@@ -101,13 +101,13 @@ function updateLocation(newLocation) {
     if (marker) map.removeLayer(marker);
 
     marker = L.marker([
-        location.latitude,
-        location.longitude
+        userLocation.latitude,
+        userLocation.longitude
     ]).addTo(map);
 
     map.setView([
-        location.latitude,
-        location.longitude
+        userLocation.latitude,
+        userLocation.longitude
     ], 14);
 }
 
@@ -127,13 +127,21 @@ async function submitChat(event) {
     button.textContent = "Thinking...";
 
     try {
+        if (!API_URL) {
+            throw new Error("AI recommendations are not configured for this GitHub Pages site.");
+        }
         const response = await fetch(API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(buildPayload(message))
         });
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error(`Backend returned an invalid response (HTTP ${response.status}).`);
+        }
 
         if (!response.ok) {
             throw new Error(data.detail?.message || "Request failed.");
@@ -155,7 +163,7 @@ async function submitChat(event) {
 /* Builds the exact structure required by ChatRequest. */
 function buildPayload(message) {
     return {
-        coordinates: location,
+        coordinates: userLocation,
         user_intent_prompt: message,
         user_preferences: {
             categories: [

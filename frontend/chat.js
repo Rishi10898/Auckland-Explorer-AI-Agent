@@ -1,46 +1,43 @@
-const API_URL = "http://127.0.0.1:8000/api/chat";
+const API_URL = window.AUCKLAND_EXPLORER_API_URL;
 let userLatitude = null,
-    userLongitude = null,
-    map = null,
-    userMarker = null;
+    userLongitude = null;
 const chatThread = document.getElementById("chatThread"),
     chatForm = document.getElementById("chatForm"),
     input = document.getElementById("fInput"),
     sendBtn = document.getElementById("sendBtn"),
     statusText = document.getElementById("statusText"),
-    statusDot = document.getElementById("statusDot"),
-    mapModal = document.getElementById("mapModal");
+    statusDot = document.getElementById("statusDot");
 function setupEvents() {
-    chatForm.addEventListener("submit", sendMessage),
-        document.querySelectorAll("[data-prompt]").forEach((e) => {
-            e.addEventListener("click", () => {
-                (input.value = e.dataset.prompt), sendMessage();
-            });
-        }),
-        document.getElementById("locateBtn").addEventListener("click", openMap),
-        document.getElementById("closeMap").addEventListener("click", closeMap),
-        mapModal.addEventListener("click", (e) => {
-            e.target === mapModal && closeMap();
+    chatForm.addEventListener("submit", sendMessage);
+    document.querySelectorAll("[data-prompt]").forEach((button) => {
+        button.addEventListener("click", () => {
+            input.value = button.dataset.prompt;
+            sendMessage();
         });
+    });
+    document.getElementById("locateBtn").addEventListener("click", getUserLocation);
 }
 function getUserLocation() {
-    setStatus("Getting location...", "loading"),
-        navigator.geolocation
-            ? navigator.geolocation.getCurrentPosition(
-                  (e) => {
-                      (userLatitude = e.coords.latitude),
-                          (userLongitude = e.coords.longitude),
-                          setStatus("Location ready", "success");
-                  },
-                  () => {
-                      useFallbackLocation();
-                  },
-                  { enableHighAccuracy: !0, timeout: 1e4, maximumAge: 3e5 }
-              )
-            : useFallbackLocation();
+    setStatus("Getting location...", "loading");
+    if (!navigator.geolocation) {
+        useFallbackLocation();
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            userLatitude = position.coords.latitude;
+            userLongitude = position.coords.longitude;
+            setStatus("Location ready", "success");
+        },
+        useFallbackLocation,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
 }
 function useFallbackLocation() {
-    (userLatitude = -36.8485), (userLongitude = 174.7633), setStatus("Using Auckland location", "success");
+    userLatitude = -36.8485;
+    userLongitude = 174.7633;
+    setStatus("Using Auckland location", "success");
 }
 async function sendMessage(e) {
     e?.preventDefault();
@@ -51,6 +48,9 @@ async function sendMessage(e) {
             setStatus("Sending to server...", "loading"),
             (sendBtn.disabled = !0);
         try {
+            if (!API_URL) {
+                throw new Error("AI recommendations are not configured for this GitHub Pages site.");
+            }
             const e = await fetch(API_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -64,7 +64,12 @@ async function sendMessage(e) {
                 }),
             });
             setStatus("Waiting for AI...", "loading");
-            const a = await e.json();
+            let a;
+            try {
+                a = await e.json();
+            } catch {
+                throw new Error(`Backend returned an invalid response (HTTP ${e.status}).`);
+            }
             if (!e.ok) throw new Error(a?.detail?.message || a?.detail || "Server request failed");
             addMessage(getAIReply(a), "ai"), setStatus("Connected", "success");
         } catch (e) {
@@ -91,32 +96,19 @@ function addMessage(e, t) {
 function setStatus(e, t) {
     (statusText.textContent = e),
         (statusDot.className = "status-dot"),
+        document.getElementById("serverStatus").textContent = e,
         "loading" === t && statusDot.classList.add("loading"),
         "error" === t && statusDot.classList.add("error");
 }
-function openMap() {
-    mapModal.classList.add("active"),
-        map ||
-            ((map = L.map("exploreMap")),
-            L.tileLayer("https://tile.openstreetmap.de/{z}/{x}/{y}.png", {
-                maxNativeZoom: 19,
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
-            }).addTo(map)),
-        updateMap(),
-        setTimeout(() => map.invalidateSize(), 100);
-}
-function updateMap() {
-    const e = [userLatitude, userLongitude];
-    userMarker ? userMarker.setLatLng(e) : (userMarker = L.marker(e).addTo(map).bindPopup("Your location")),
-        map.setView(e, 13);
-}
-function closeMap() {
-    mapModal.classList.remove("active");
-}
 function loadPlaceFromURL() {
-    const e = new URLSearchParams(window.location.search).get("place");
-    e && (input.value = `Tell me about ${e}`);
+    const params = new URLSearchParams(window.location.search);
+    const prompt = params.get("prompt");
+    const place = params.get("place");
+    if (prompt) {
+        input.value = prompt;
+    } else if (place) {
+        input.value = `Tell me about ${place}`;
+    }
 }
 function escapeHTML(e) {
     const t = document.createElement("div");
