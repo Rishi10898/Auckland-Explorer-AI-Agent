@@ -287,9 +287,26 @@ body[class*="theme-"] .nav { background:var(--theme-card); color:var(--theme-tex
 body[class*="theme-"] .nav-links { color:var(--theme-muted); }
 body[class*="theme-"] .btn-secondary { background:var(--theme-bg); color:var(--theme-text); }
 body[class*="theme-"] .card,
+body[class*="theme-"] .place-card,
+body[class*="theme-"] .location-popup-card,
+body[class*="theme-"] .message.ai,
+body[class*="theme-"] .recommendation,
 body[class*="theme-"] .page-tool-button,
 body[class*="theme-"] .theme-select { background:var(--theme-card); color:var(--theme-text); }
+body[class*="theme-"] .input,
+body[class*="theme-"] textarea,
+body[class*="theme-"] select,
+body[class*="theme-"] .location-circle,
+body[class*="theme-"] .quick-actions button {
+    background:var(--theme-card);
+    color:var(--theme-text);
+}
+body[class*="theme-"] .quick-actions button { color:var(--theme-muted); }
 body.theme-dark .card,
+body.theme-dark .place-card,
+body.theme-dark .location-popup-card,
+body.theme-dark .message.ai,
+body.theme-dark .recommendation,
 body.theme-dark .page-tool-button { border-color:#374151; }
 body.theme-dark .place-description,
 body.theme-dark .place-region,
