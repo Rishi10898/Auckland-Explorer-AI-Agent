@@ -1,6 +1,30 @@
 (() => {
   const key = "aucklandExplorerTheme";
   const themes = ["light", "dark", "ocean", "sunset", "forest", "lavender"];
+  if (!document.querySelector("[data-theme-picker]")) {
+    const nav = document.querySelector(".nav");
+    if (nav) {
+      nav.insertAdjacentHTML("afterend", `
+        <div class="theme-controls-row">
+          <div class="theme-picker" data-theme-picker>
+            <button class="theme-picker-trigger" data-theme-menu-trigger type="button" aria-haspopup="true" aria-expanded="false" aria-label="Open appearance options">🌙</button>
+            <div class="theme-picker-menu" data-theme-menu role="group" aria-label="Appearance options" hidden>
+              <button class="theme-picker-toggle" data-theme-toggle type="button" aria-label="Switch to dark theme" aria-pressed="false">🌙 <span>Toggle light / dark</span></button>
+              <span class="theme-picker-label">Choose a color</span>
+              <button class="theme-option" data-theme-option="light" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-light"></span>Light</button>
+              <button class="theme-option" data-theme-option="dark" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-dark"></span>Dark</button>
+              <button class="theme-option" data-theme-option="ocean" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-ocean"></span>Ocean</button>
+              <button class="theme-option" data-theme-option="sunset" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-sunset"></span>Sunset</button>
+              <button class="theme-option" data-theme-option="forest" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-forest"></span>Forest</button>
+              <button class="theme-option" data-theme-option="lavender" type="button" role="radio" aria-checked="false"><span class="theme-swatch swatch-lavender"></span>Lavender</button>
+            </div>
+          </div>
+        </div>
+      `);
+    } else {
+      console.error("Could not add appearance controls because the page navigation is missing.");
+    }
+  }
   const triggers = document.querySelectorAll("[data-theme-menu-trigger]");
   const menus = document.querySelectorAll("[data-theme-menu]");
   const toggles = document.querySelectorAll("[data-theme-toggle]");
