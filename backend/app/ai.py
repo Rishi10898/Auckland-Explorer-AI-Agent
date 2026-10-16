@@ -1,3 +1,10 @@
+"""Create AI-powered Auckland destination recommendations.
+
+This module coordinates live weather and place data with an NVIDIA-hosted
+language model, then enriches the first recommendation with transport details.
+It is the recommendation-generation layer used by the backend API; it does not
+fetch or calculate weather, places, or transport itself.
+"""
 import os
 import json
 import logging
@@ -10,15 +17,20 @@ from app.places import get_auckland_places
 from app.transport import get_transport_info
 
 
+# Load environment variables (including NVIDIA_API_KEY) from a local .env file
+# when one is present. Deployed environments can provide these variables directly.
 load_dotenv()
 
+# A named logger makes AI-service failures identifiable in backend logs.
 logger = logging.getLogger("auckland_explorer.ai")
 
+# NVIDIA's OpenAI-compatible API endpoint and the model used for recommendations.
 NVIDIA_MODEL = "deepseek-ai/deepseek-v4-flash-0731"
 NVIDIA_URL = "https://integrate.api.nvidia.com/v1"
 
 
 def get_nvidia_client():
+    """Build an authenticated client, failing clearly if its API key is absent."""
     key = os.getenv("NVIDIA_API_KEY")
 
     if not key:
@@ -33,7 +45,12 @@ async def generate_location_recommendations(
     lon: float,
     user_preferences: dict
 ):
+    """Gather live context and delegate recommendation generation to the AI.
 
+    Weather is required, and places are searched for each requested category.
+    A failure to get required live data stops the flow rather than letting the
+    model make recommendations from invented or stale information.
+    """
     weather = get_auckland_weather(lat=lat, lon=lon)
 
     if weather.get("status") != "success":
@@ -41,11 +58,13 @@ async def generate_location_recommendations(
             "LIVE_WEATHER_UNAVAILABLE"
         )
 
+    # Use caller-selected place categories, with beaches and parks as defaults.
     categories = user_preferences.get(
         "categories",
         ["BEACH", "PARK_RECREATION_AREA"]
     )
 
+    # Merge successful results across categories into the model's allowed-place list.
     places = []
 
     for category in categories:
@@ -67,6 +86,7 @@ async def generate_location_recommendations(
             "LIVE_PLACE_SEARCH_UNAVAILABLE"
         )
 
+    # Pass user intent, preferences, and verified live context to the AI stage.
     return await ask_ai(
         user_prompt,
         user_preferences,
@@ -85,15 +105,23 @@ async def ask_ai(
     lat,
     lon
 ):
+    """Ask the model to select destinations, validate its output, and add transit.
 
+    The model receives only the live place results as candidate destinations.
+    Its response is parsed into the project's schema before transport is queried.
+    """
     client = get_nvidia_client()
 
+    # Keep budget and travel mode explicit in the prompt so the model can account
+    # for them; a default mode is used when the user did not specify one.
     budget = preferences.get("budget")
     transport_mode = preferences.get(
         "transport",
         "public_transport"
     )
 
+    # The prompt constrains recommendations to real results and requests a stable
+    # JSON shape that the backend can validate and return to the frontend.
     prompt = f"""
 You are Auckland Explorer.
 
@@ -149,6 +177,8 @@ Return exactly:
 }}
 """
 
+    # Request a non-streaming completion because the backend processes one complete
+    # JSON response. Parse model output and normalize failures for the API layer.
     try:
         response = client.chat.completions.create(
             model=NVIDIA_MODEL,
@@ -166,7 +196,8 @@ Return exactly:
         if not text:
             raise RuntimeError("AI_EMPTY_RESPONSE")
 
-        # Models sometimes wrap otherwise valid JSON in a Markdown code fence.
+        # Models sometimes wrap otherwise valid JSON in a Markdown code fence;
+        # remove that wrapper before parsing the JSON payload.
         if text.startswith("```") and text.endswith("```"):
             text = text.split("\n", 1)[1].rsplit("\n", 1)[0]
 
@@ -176,6 +207,8 @@ Return exactly:
         logger.exception("AI request failed.")
         raise RuntimeError("AI_MODEL_UNAVAILABLE") from exc
 
+    # Convert plain dictionaries into typed response items and cap the count even
+    # if the model ignores the requested maximum.
     try:
         recommendations = [
             DestinationMatchItem(**item)
@@ -190,11 +223,14 @@ Return exactly:
             "AI_NO_VALID_RECOMMENDATIONS"
         )
 
+    # Transport details are currently calculated for the top-ranked destination.
+    # Coordinates are required to query the transport service correctly.
     first = recommendations[0]
 
     if first.latitude is None or first.longitude is None:
         raise RuntimeError("AI_INVALID_RESPONSE")
 
+    # Enrich the recommendation response using the user's origin, budget, and mode.
     transport = await get_transport_info(
         user_lat=lat,
         user_lon=lon,
@@ -204,6 +240,8 @@ Return exactly:
         transport_mode=transport_mode
     )
 
+    # Return the concise summary, validated destination objects, and transport data
+    # in the structure expected by the rest of the application.
     return {
         "summary": data.get("summary", ""),
         "recommendations": recommendations,
