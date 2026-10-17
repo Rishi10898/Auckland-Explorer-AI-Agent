@@ -1,3 +1,5 @@
+# Purpose: keep the existing production API service and define an isolated
+# staging service that also has the repository frontend available to FastAPI.
 services:
   - type: web
     name: auckland-explorer-ai-agent-api
@@ -8,6 +10,29 @@ services:
     buildCommand: pip install -r app/requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: OPEN_WEATHER_API_KEY
+        sync: false
+      - key: TOMTOM_API_KEY
+        sync: false
+  - type: web
+    name: auckland-explorer-ai-agent-staging
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: .
+    buildCommand: pip install -r backend/app/requirements.txt
+    startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FRONTEND_DIR
+        value: frontend
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_3
+        sync: false
       - key: NVIDIA_API_KEY
         sync: false
       - key: OPEN_WEATHER_API_KEY

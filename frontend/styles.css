@@ -1,5 +1,7 @@
 @import "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap";
 @import "https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap";
+/* Purpose: shared visual system, including chat, privacy, and recommendation map styles.
+   Workflow: global theme tokens and components style every static page consistently. */
 :root {
     --bg: #050816;
     --panel: #0f172ab8;
@@ -974,4 +976,264 @@ textarea {
     }
 
     .page-tools { justify-content: flex-start; }
+}
+
+/* AI chat controls, privacy dialog, recommendation cards, and result map. */
+.ai-page {
+    width: min(1080px, 94%);
+    height: calc(100dvh - 150px);
+    min-height: 520px;
+    margin: 0 auto 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px 18px;
+}
+
+.chat-header h1,
+.chat-header p { margin: 2px 0; }
+.chat-header h1 { font-size: 1.4rem; }
+.chat-header > div:first-child > p:first-child {
+    color: var(--cyan);
+    font-size: .7rem;
+    letter-spacing: .08em;
+}
+.chat-header .chat-intro {
+    color: var(--muted);
+    font-size: .88rem;
+}
+
+.location-controls {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: max-content;
+}
+
+.location-controls #statusText {
+    max-width: 175px;
+    color: var(--muted);
+    font-size: .78rem;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 9px;
+    border-radius: 50%;
+    background: #22c55e;
+}
+.status-dot.loading { animation: pulse 1s infinite; }
+.status-dot.error { background: #ef4444; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+.locate-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+}
+
+.chat-thread {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 2px 12px;
+    scroll-behavior: smooth;
+}
+
+.chat-thread .message {
+    max-width: 84%;
+    margin: 8px 0;
+    padding: 13px 16px;
+    border-radius: 18px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+.chat-thread .message p { margin: 5px 0; }
+.chat-thread .message.ai { background: var(--theme-card, #0f172a); }
+.chat-thread .message.user {
+    margin-left: auto;
+    color: #fff;
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+}
+.message-name {
+    margin-bottom: 5px;
+    font-size: .74rem;
+    font-weight: 700;
+}
+.message.ai.result-message {
+    width: 100%;
+    max-width: 100%;
+}
+
+.recommendation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr));
+    gap: 10px;
+    margin: 12px 0;
+}
+.recommendation-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--theme-bg, #0b1220);
+}
+.recommendation-card h3 {
+    margin: 0 0 5px;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+}
+.recommendation-card .place-category,
+.recommendation-card .place-distance {
+    color: var(--muted);
+    font-size: .78rem;
+}
+.recommendation-card p { margin: 8px 0; }
+.recommendation-card details { margin-top: 8px; }
+.recommendation-card summary { cursor: pointer; color: var(--cyan); }
+.recommendation-card a,
+.safety-notice a {
+    color: var(--cyan);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.recommendation-map {
+    width: 100%;
+    height: 310px;
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.map-radius-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin: 8px 0;
+    color: var(--muted);
+    font-size: .78rem;
+}
+.map-radius-legend strong { color: var(--text); }
+.safety-notice {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #f59e0b;
+    border-radius: 12px;
+    background: #f59e0b18;
+}
+.safety-notice[data-status="warning"] {
+    border-color: #ef4444;
+    background: #ef44441a;
+}
+.safety-notice h3 { margin: 0 0 4px; font-size: .95rem; }
+
+.chat-controls {
+    flex: 0 0 auto;
+    padding: 10px 12px;
+}
+.quick-actions {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    margin-bottom: 8px;
+    padding-bottom: 2px;
+}
+.quick-actions button {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--theme-bg, #0f172a);
+    color: var(--text);
+    font: inherit;
+    font-size: .82rem;
+    cursor: pointer;
+}
+.quick-actions button:hover { border-color: var(--cyan); }
+.control-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.control-row label {
+    min-width: 0;
+    color: var(--muted);
+    font-size: .76rem;
+}
+.control-row select {
+    display: block;
+    min-height: 39px;
+    margin-top: 3px;
+    padding: 7px 10px;
+    font-size: .86rem;
+}
+.chat-location-note {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 5px 2px 8px;
+    color: var(--muted);
+    font-size: .76rem;
+}
+.chat-location-note a { color: var(--cyan); text-decoration: underline; }
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row input { min-width: 0; flex: 1; }
+.chat-input-row button { width: 48px; font-size: 1.2rem; }
+.chat-input-row button:disabled { cursor: wait; opacity: .7; }
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.location-dialog {
+    width: min(560px, calc(100% - 28px));
+    max-height: min(90dvh, 720px);
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--theme-card, #0f172a);
+    color: var(--text);
+}
+.location-dialog::backdrop { background: #000a; backdrop-filter: blur(4px); }
+.location-dialog h2 { margin-top: 0; font-size: 1.2rem; }
+.location-dialog p { color: var(--muted); line-height: 1.55; font-size: .9rem; }
+.location-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.location-dialog-actions .btn { min-height: 42px; font: inherit; cursor: pointer; }
+.location-dialog :focus-visible,
+.chat-controls :focus-visible,
+.chat-thread a:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    .ai-page { width: 96%; height: calc(100dvh - 125px); min-height: 500px; }
+    .chat-header { align-items: flex-start; padding: 11px 13px; }
+    .chat-header h1 { font-size: 1.2rem; }
+    .chat-header .chat-intro { max-width: 340px; font-size: .78rem; }
+    .location-controls { gap: 6px; }
+    .location-controls #statusText { max-width: 105px; font-size: .7rem; }
+    .chat-thread .message { max-width: 94%; }
+    .control-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+    .control-row select { padding: 7px 5px; font-size: .78rem; }
+    .chat-location-note { flex-wrap: wrap; }
+    .recommendation-map { height: 245px; }
 }
