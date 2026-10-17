@@ -98,6 +98,29 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(gemini.call_count, 3)
         nvidia.assert_called_once_with("prompt")
 
+    def test_malformed_gemini_response_falls_back_to_nvidia(self):
+        settings = SimpleNamespace(
+            gemini_api_keys=("key-one", "key-two", "key-three"),
+            nvidia_api_key="nvidia-key",
+        )
+        with (
+            patch.object(ai, "settings", settings),
+            patch.object(
+                ai,
+                "_generate_gemini_text",
+                side_effect=ai.ProviderError("malformed_response"),
+            ),
+            patch.object(
+                ai,
+                "_generate_nvidia_text",
+                return_value='{"summary":"ok","recommendations":[]}',
+            ) as nvidia,
+        ):
+            result = ai._generate_text("prompt")
+
+        self.assertEqual(result[1], "nvidia")
+        nvidia.assert_called_once_with("prompt")
+
     def test_prompt_excludes_user_and_place_coordinates(self):
         place = candidate()
         prompt = ai._recommendation_prompt(
@@ -110,6 +133,7 @@ class RecommendationTests(unittest.TestCase):
         self.assertNotIn(str(place["latitude"]), prompt)
         self.assertNotIn(str(place["longitude"]), prompt)
         self.assertNotIn(place["address"], prompt)
+        self.assertIn('"distance_meters": 250', prompt)
         self.assertIn(place["candidate_id"], prompt)
 
     def test_model_cannot_add_unknown_or_duplicate_candidates(self):
@@ -134,6 +158,15 @@ class RecommendationTests(unittest.TestCase):
                 with self.assertRaises(ai.RecommendationError) as error:
                     ai._parse_model_response(json.dumps(data), [place])
                 self.assertEqual(error.exception.code, "AI_INVALID_RESPONSE")
+
+    def test_model_cannot_return_an_empty_summary(self):
+        with self.assertRaises(ai.RecommendationError) as error:
+            ai._parse_model_response(
+                json.dumps({"summary": "  ", "recommendations": []}),
+                [candidate()],
+            )
+
+        self.assertEqual(error.exception.code, "AI_INVALID_RESPONSE")
 
     def test_output_uses_verified_place_name_and_coordinates(self):
         place = candidate()

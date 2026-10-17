@@ -75,7 +75,7 @@ async def generate_regional_destination_matches(
             lon=request.coordinates.longitude,
             user_preferences=request.user_preferences,
         )
-        return DestinationMatchResponse(
+        result = DestinationMatchResponse(
             cultural_greeting=(
                 "Tēnā koe! Welcome to beautiful Tāmaki Makaurau (Auckland)."
             ),
@@ -87,6 +87,12 @@ async def generate_regional_destination_matches(
             environmental_safety_source=environmental_alert["source"],
             ai_provider=processed_destinations["provider"],
         )
+        logger.info(
+            "Recommendation request completed (provider=%s, destinations=%d).",
+            result.ai_provider,
+            len(result.recommended_destinations),
+        )
+        return result
     except RecommendationError as error:
         logger.warning("Recommendation workflow failed (%s).", error.code)
         raise HTTPException(
@@ -98,7 +104,10 @@ async def generate_regional_destination_matches(
             },
         ) from error
     except Exception as error:
-        logger.exception("Unexpected recommendation error.")
+        logger.error(
+            "Unexpected recommendation error (%s).",
+            type(error).__name__,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
