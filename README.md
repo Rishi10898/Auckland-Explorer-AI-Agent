@@ -20,17 +20,14 @@ The existing static site remains on GitHub Pages. The existing Render API servic
 
 Set credentials as environment variables or in the ignored `backend/.env` file for local work. Never put values in frontend files or commit them.
 
-Required for the full location-aware workflow:
+For recommendations, configure at least one Gemini key and the TomTom key. Add OpenWeather for live weather context; the other Gemini project keys are optional fallback slots.
 
 ```text
 GEMINI_API_KEY_1
-GEMINI_API_KEY_2
-GEMINI_API_KEY_3
 TOMTOM_API_KEY
-OPEN_WEATHER_API_KEY
 ```
 
-`NVIDIA_API_KEY` is optional and enables the OpenAI-compatible NVIDIA fallback. The fallback model defaults to the existing integration's `deepseek-ai/deepseek-v4-flash-0731`; set `NVIDIA_MODEL` only after checking the model ID is available to your NVIDIA account. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. `AT_API_KEY` and `AT_REALTIME_URL` are optional; without them the app still provides the public AT Journey Planner link.
+`GEMINI_API_KEY_2`, `GEMINI_API_KEY_3`, `OPEN_WEATHER_API_KEY`, and `NVIDIA_API_KEY` are optional. NVIDIA enables the OpenAI-compatible fallback. Its model defaults to the existing integration's `deepseek-ai/deepseek-v4-flash-0731`; set `NVIDIA_MODEL` only after checking availability in your NVIDIA account. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. `AT_API_KEY` and `AT_REALTIME_URL` are optional; without them the app still provides the public AT Journey Planner link.
 
 Gemini requests use the three configured project keys in order. A Gemini quota/429 response stops the Gemini sequence instead of rotating keys to evade a limit. Other temporary failures may fall through to another configured Gemini project and then NVIDIA. Separate projects do not guarantee independent account, billing, or model limits. Monitor each project's active limits and billing independently.
 
@@ -43,10 +40,10 @@ Use Python 3.11+ and install the pinned/ranged backend dependencies:
 ```powershell
 Set-Location backend
 python -m pip install -r app/requirements.txt
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --log-level info
 ```
 
-Open `http://127.0.0.1:8000/` for the site, `/chat.html` for chat, `/docs` for the FastAPI schema, or `/health` for a credential-free health response. The browser frontend uses the same local FastAPI service.
+Run these commands from the `backend` directory. Open `http://127.0.0.1:8000/chat.html` (not a `file://` page) so the browser uses the local API. Each submitted chat request logs a received and completed line in the terminal, but intentionally does not log the prompt or coordinates. `/`, `/docs`, and `/health` are also available.
 
 ## Tests and local visual checks
 
@@ -74,11 +71,19 @@ Live API verification requires your own provider credentials, sends location dat
 
 ## Render staging (separate from production)
 
-`render.yaml` retains the current production service definition and adds a separately named `auckland-explorer-ai-agent-staging` web service. The staging service uses the repository root so it can serve `frontend/`; it starts the backend from `backend/`. Review the blueprint and required environment variables in the Render dashboard before creating the service. Do not sync staging secrets from production.
+`render.yaml` retains the current production service definition and adds a separately named `auckland-explorer-ai-agent-staging` web service. Because the Blueprint contains both services, use the dashboard steps below to create staging alone and avoid changing the existing production service.
 
-Set the staging environment variables listed above, at minimum the three Gemini keys, TomTom key, and OpenWeather key; add NVIDIA only if you want that fallback. The staging service serves the site and `/api/chat` from one origin. Check Render build/deploy logs, `/health`, `/`, `/chat.html`, and `/docs`; then exercise the chat/map with test credentials while checking browser network requests for leaked secrets. Secrets belong only in Render's environment settings, never in browser JavaScript.
+1. In Render, choose **New → Web Service**, connect this repository, and select the intended branch.
+2. Set **Root Directory** to `.`, **Runtime** to Python, and **Instance Type** to Free.
+3. Set **Build Command** to `pip install -r backend/app/requirements.txt`.
+4. Set **Start Command** to `uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT`.
+5. Set **Health Check Path** to `/health` and add `FRONTEND_DIR=frontend`.
+6. Add `GEMINI_API_KEY_1` and `TOMTOM_API_KEY`; add `OPEN_WEATHER_API_KEY` for weather, more Gemini keys for eligible transient failures, and `NVIDIA_API_KEY` only if you want that fallback. Enter secrets in Render's environment settings, never in the Blueprint or browser code.
+7. Create and deploy the new staging service. Check its `/health`, `/`, `/chat.html`, and `/docs` routes, then test the chat. This same-origin service needs no extra CORS origin.
 
-Creating a second service may incur separate compute, bandwidth, and provider usage; plan availability, sleep behavior, and pricing depend on the current Render account/plan and must be checked before creation. Do not deploy this blueprint or change the production URL without explicit authorization. To disable staging, remove or suspend only the separately named staging service in Render; leave GitHub Pages and the current production service untouched.
+Free web services sleep after 15 minutes without traffic and can take about a minute to wake. They use ephemeral filesystems and share monthly workspace instance-hours, bandwidth, and build limits. Check Render's [Free instance limits](https://render.com/docs/free) before deploying. Do not change the production URL or deploy the full Blueprint without reviewing its production service entry.
+
+Provider usage may still incur charges independently of Render's free compute. To disable staging, remove or suspend only the separately named staging service; leave GitHub Pages and the current production service untouched.
 
 ## Current limitations
 

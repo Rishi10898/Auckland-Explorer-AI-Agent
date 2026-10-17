@@ -89,43 +89,52 @@ class ApiTests(unittest.TestCase):
             latitude=-36.8606,
             longitude=174.7785,
         )
-        with (
-            patch(
-                "app.main.fetch_realtime_environmental_alerts",
-                new=AsyncMock(
-                    return_value={
-                        "notice": "Unsafe swimming warning.",
-                        "status": "warning",
-                        "source": SAFESWIM_SOURCE,
-                    }
+        with self.assertLogs("auckland_explorer.core", level="INFO") as logs:
+            with (
+                patch(
+                    "app.main.fetch_realtime_environmental_alerts",
+                    new=AsyncMock(
+                        return_value={
+                            "notice": "Unsafe swimming warning.",
+                            "status": "warning",
+                            "source": SAFESWIM_SOURCE,
+                        }
+                    ),
                 ),
-            ),
-            patch(
-                "app.main.generate_location_recommendations",
-                new=AsyncMock(
-                    return_value={
-                        "summary": "A nearby park.",
-                        "recommendations": [destination],
-                        "transport": None,
-                        "provider": "gemini",
-                    }
+                patch(
+                    "app.main.generate_location_recommendations",
+                    new=AsyncMock(
+                        return_value={
+                            "summary": "A nearby park.",
+                            "recommendations": [destination],
+                            "transport": None,
+                            "provider": "gemini",
+                        }
+                    ),
                 ),
-            ),
-        ):
-            response = self.client.post(
-                "/api/chat",
-                json={
-                    "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
-                    "user_intent_prompt": "Find a park",
-                    "user_preferences": {
-                        "categories": ["PARK_RECREATION_AREA"],
-                        "transport_mode": "walk",
-                        "radius_meters": 2000,
+            ):
+                response = self.client.post(
+                    "/api/chat",
+                    json={
+                        "coordinates": {
+                            "latitude": -36.8485,
+                            "longitude": 174.7633,
+                        },
+                        "user_intent_prompt": "Find a park",
+                        "user_preferences": {
+                            "categories": ["PARK_RECREATION_AREA"],
+                            "transport_mode": "walk",
+                            "radius_meters": 2000,
+                        },
                     },
-                },
-            )
+                )
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("Received Auckland Explorer recommendation request.", logs.output[0])
+        self.assertIn(
+            "Recommendation request completed (provider=gemini, destinations=1).",
+            logs.output[1],
+        )
         payload = response.json()
         self.assertEqual(payload["summary"], "A nearby park.")
         self.assertEqual(payload["recommended_destinations"][0]["place_name"], "Auckland Domain")
@@ -160,6 +169,42 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["detail"]["error_code"], "AI_QUOTA_EXCEEDED")
         self.assertIn("quota", response.json()["detail"]["message"].lower())
+
+    def test_unexpected_error_is_logged_without_raw_details(self):
+        with (
+            self.assertLogs("auckland_explorer.core", level="ERROR") as logs,
+            patch(
+                "app.main.fetch_realtime_environmental_alerts",
+                new=AsyncMock(
+                    return_value={
+                        "notice": UNVERIFIED_NOTICE,
+                        "status": "unverified",
+                        "source": SAFESWIM_SOURCE,
+                    }
+                ),
+            ),
+            patch(
+                "app.main.generate_location_recommendations",
+                new=AsyncMock(
+                    side_effect=RuntimeError("sensitive upstream detail")
+                ),
+            ),
+        ):
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
+                    "user_intent_prompt": "Find a park",
+                },
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()["detail"]["error_code"],
+            "INTERNAL_SERVER_ERROR",
+        )
+        self.assertIn("RuntimeError", logs.output[0])
+        self.assertNotIn("sensitive upstream detail", logs.output[0])
 
 
 if __name__ == "__main__":

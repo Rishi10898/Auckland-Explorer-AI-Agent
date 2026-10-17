@@ -129,8 +129,6 @@ def _generate_text(prompt: str) -> tuple[str, str]:
         if key
     ]
     last_category = "not_configured"
-    nvidia_fallback_allowed = True
-
     for index, key in configured_gemini:
         try:
             return _generate_gemini_text(key, prompt), "gemini"
@@ -143,11 +141,8 @@ def _generate_text(prompt: str) -> tuple[str, str]:
             )
             if error.category == "quota":
                 raise RecommendationError("AI_QUOTA_EXCEEDED") from error
-            if error.category in ("permission", "malformed_response"):
-                nvidia_fallback_allowed = False
-                break
 
-    if nvidia_fallback_allowed and settings.nvidia_api_key:
+    if settings.nvidia_api_key:
         try:
             return _generate_nvidia_text(prompt), "nvidia"
         except ProviderError as error:
@@ -173,6 +168,7 @@ def _recommendation_prompt(
             "candidate_id": place["candidate_id"],
             "name": place["name"],
             "category": place["category"],
+            "distance_meters": round(place["distance_meters"]),
         }
         for place in places
     ]
@@ -205,7 +201,8 @@ VERIFIED TOMTOM CANDIDATES (only these IDs may be recommended):
 Rules:
 - Select only candidate_id values present in the verified candidate list.
 - Never invent place names, coordinates, prices, access details, transport fares, or ETAs.
-- Use the user's request and preferences; prefer candidates within the selected radius when possible.
+- Prefer candidates within the selected radius, using their straight-line distances.
+- If none are within the radius, choose the nearest suitable candidates.
 - Weather context may be considered, but do not claim a condition not shown above.
 - Keep the summary brief and each rationale specific and concise.
 - Return at most {MAX_RECOMMENDATIONS} distinct recommendations.
@@ -243,6 +240,7 @@ def _parse_model_response(
     raw_recommendations = data.get("recommendations")
     if (
         not isinstance(summary, str)
+        or not summary.strip()
         or len(summary) > 500
         or not isinstance(raw_recommendations, list)
         or len(raw_recommendations) > MAX_RECOMMENDATIONS
