@@ -1,17 +1,17 @@
-"""Provide Auckland Transport journey links and report realtime API status.
+"""Build Auckland Transport planner links and optionally check live-service reachability.
 
-Route and fare planning is delegated to AT's journey planner. The optional API
-check indicates whether realtime service is reachable; it does not plan routes.
+Purpose: offer a public journey-planner link without fabricating routes or fares.
+Workflow: validated origin/destination -> encoded AT link -> optional API status.
 """
 
-import os
-import httpx
 from urllib.parse import quote
 
+import httpx
 
-# Optional realtime API endpoint from deployment configuration, and the public
-# planner URL used to give callers a reliable route-planning fallback.
-AT_REALTIME_URL = os.getenv("AT_REALTIME_URL")
+from app.config import settings
+
+
+AT_REALTIME_URL = settings.at_realtime_url
 AT_JOURNEY_URL = "https://at.govt.nz/bus-train-ferry/journey-planner"
 
 
@@ -53,7 +53,7 @@ async def get_transport_info(
     if not AT_REALTIME_URL:
         return result
 
-    api_key = os.getenv("AT_API_KEY")
+    api_key = settings.at_api_key
 
     # The configured API requires a subscription key for authentication.
     if not api_key:
@@ -75,7 +75,7 @@ async def get_transport_info(
             )
 
             response.raise_for_status()
-            data = response.json()
+            response.json()
 
             # A successful response confirms availability; this function does
             # not interpret the payload as route or fare information.
@@ -84,7 +84,7 @@ async def get_transport_info(
 
             return result
 
-    except Exception:
+    except (httpx.HTTPError, ValueError):
         # Preserve the planner fallback and report that live data could not be
         # checked because of a network, HTTP, or response error.
         result["status"] = "Live AT data temporarily unavailable"
