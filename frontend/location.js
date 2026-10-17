@@ -1,4 +1,5 @@
 (() => {
+  // Store consent and coordinates locally; GPS is requested only after consent.
   const locationKey = "aucklandExplorerUserLocation";
   const consentKey = "aucklandExplorerLocationConsent";
   const consent = document.getElementById("locationConsent");
@@ -6,121 +7,98 @@
   const name = document.getElementById("userLocationName");
   const status = document.getElementById("locationStatus");
   const mapStatus = document.getElementById("mapStatus");
-  let reverseLookupTimer;
-  let reverseLookupId = 0;
-  let reverseLookupController;
-
+  let lookupTimer;
+  let lookupId = 0;
+  let lookupController;
   if (!consent || !shareButton || !name || !status) return;
-
-  function showLocationOnMap(location) {
+  function showOnMap(location) {
     if (typeof window.showUserLocationOnMap === "function") {
       window.showUserLocationOnMap(
-        location.latitude,
-        location.longitude,
+        location.latitude, location.longitude,
         location.displayName || location.areaName || "Your current location",
       );
     }
   }
-
+  // Reject invalid stored coordinates before they reach the map.
   function readLocation() {
     const location = JSON.parse(localStorage.getItem(locationKey) || "null");
-    if (
-      !location ||
-      !Number.isFinite(location.latitude) ||
-      !Number.isFinite(location.longitude) ||
-      Math.abs(location.latitude) > 90 ||
-      Math.abs(location.longitude) > 180
-    ) {
-      return null;
-    }
-    return location;
+    return location && Number.isFinite(location.latitude) &&
+      Number.isFinite(location.longitude) && Math.abs(location.latitude) <= 90 &&
+      Math.abs(location.longitude) <= 180 ? location : null;
   }
-
+  // Reverse-geocode coordinates for a readable label; ignore superseded requests.
   async function updateLocationName(location) {
-    const lookupId = ++reverseLookupId;
-    reverseLookupController?.abort();
-    reverseLookupController = new AbortController();
+    const id = ++lookupId;
+    lookupController?.abort();
+    lookupController = new AbortController();
     const query = new URLSearchParams({
-      format: "jsonv2",
-      lat: location.latitude,
-      lon: location.longitude,
-      zoom: "16",
-      addressdetails: "1",
+      format: "jsonv2", lat: location.latitude, lon: location.longitude,
+      zoom: "16", addressdetails: "1",
     });
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?${query}`,
-        { signal: reverseLookupController.signal },
+        { signal: lookupController.signal },
       );
       if (!response.ok) throw new Error("Location name lookup failed");
       const data = await response.json();
-      if (lookupId !== reverseLookupId) return;
+      if (id !== lookupId) return;
+
       const address = data.address || {};
       const locality = address.suburb || address.city_district || address.village ||
         address.town || address.neighbourhood || address.city;
-      const area = [locality, address.city || address.municipality || address.county]
-        .filter((part, index, parts) => part && parts.indexOf(part) === index)
-        .join(", ");
+      const parts = [locality, address.city || address.municipality || address.county];
+      const area = parts.filter((part, index) => part && parts.indexOf(part) === index).join(", ");
       const displayName = typeof data.display_name === "string" ? data.display_name : "";
       if (displayName) location.displayName = displayName;
-      if (area) {
-        location.areaName = area;
-      }
+      if (area) location.areaName = area;
       if (displayName || area) localStorage.setItem(locationKey, JSON.stringify(location));
+
       name.textContent = `Your location · ${displayName || area || "Current location"}`;
       status.textContent = location.manuallyAdjusted
         ? "Manually adjusted map location saved. Driving distances use this point."
         : `GPS accuracy ±${Math.round(location.accuracy || 0)} m.`;
-      showLocationOnMap(location);
+      showOnMap(location);
     } catch (error) {
-      if (lookupId !== reverseLookupId) return;
+      if (id !== lookupId) return;
       name.textContent = location.areaName
-        ? `Your location · ${location.areaName}`
-        : "Your current location";
+        ? `Your location · ${location.areaName}` : "Your current location";
       status.textContent = "Location is saved, but its area name could not be found.";
-      showLocationOnMap(location);
+      showOnMap(location);
       console.error("Could not look up the saved location name.", error);
     }
   }
-
+  // Map marker changes save a manual starting point and debounce its name lookup.
   function saveAdjustedLocation(latitude, longitude) {
     if (!consent.checked) return;
-    if (
-      !Number.isFinite(latitude) ||
-      !Number.isFinite(longitude) ||
-      Math.abs(latitude) > 90 ||
-      Math.abs(longitude) > 180
-    ) {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+        Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
       status.textContent = "The adjusted map location is invalid and was not saved.";
       return;
     }
 
     const location = readLocation() || {};
-    location.latitude = latitude;
-    location.longitude = longitude;
-    location.manuallyAdjusted = true;
+    Object.assign(location, { latitude, longitude, manuallyAdjusted: true });
     delete location.accuracy;
     delete location.areaName;
     delete location.displayName;
 
     try {
-      reverseLookupId += 1;
+      lookupId++;
       localStorage.setItem(locationKey, JSON.stringify(location));
       name.textContent = "Finding the adjusted location name…";
       status.textContent = "Adjusted location saved. Looking up its area name…";
       if (mapStatus) mapStatus.textContent = "📍 Adjusted starting point saved; distances will use this location.";
       window.dispatchEvent(new CustomEvent("auckland-explorer-location-change"));
-
-      clearTimeout(reverseLookupTimer);
-      reverseLookupTimer = setTimeout(() => updateLocationName(location), 1100);
+      clearTimeout(lookupTimer);
+      lookupTimer = setTimeout(() => updateLocationName(location), 1100);
     } catch (error) {
       status.textContent = "The adjusted location could not be saved in this browser.";
       console.error("Could not save the adjusted location.", error);
     }
   }
-
   window.saveAdjustedUserLocation = saveAdjustedLocation;
-
   try {
     const hasConsent = localStorage.getItem(consentKey) === "true";
     const location = readLocation();
@@ -143,39 +121,37 @@
     status.textContent = "Could not read saved location settings in this browser.";
     console.error("Could not read saved location settings.", error);
   }
-
   consent.addEventListener("change", () => {
     try {
       localStorage.setItem(consentKey, String(consent.checked));
       shareButton.disabled = !consent.checked || shareButton.dataset.loading === "true";
       if (!consent.checked) {
-        clearTimeout(reverseLookupTimer);
-        reverseLookupId += 1;
-        reverseLookupController?.abort();
+        clearTimeout(lookupTimer);
+        lookupId++;
+        lookupController?.abort();
         name.textContent = "Location sharing is off";
         status.textContent = "Saved location distances are paused until you consent again.";
         if (mapStatus) mapStatus.textContent = "Consent and share your location to show it on the map.";
-        if (typeof window.clearUserLocationFromMap === "function") {
-          window.clearUserLocationFromMap();
-        }
-      } else {
-        status.textContent = "Consent saved. Share your location or use the saved location.";
-        if (mapStatus) mapStatus.textContent = "Consent is on. Share your location to show it on the map.";
-        const location = readLocation();
-        if (location) {
-          name.textContent = "Finding your area…";
-          status.textContent = location.manuallyAdjusted
-            ? "Using your manually adjusted map location."
-            : `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
-          updateLocationName(location);
-        }
+        if (typeof window.clearUserLocationFromMap === "function") window.clearUserLocationFromMap();
+        return;
+      }
+
+      status.textContent = "Consent saved. Share your location or use the saved location.";
+      if (mapStatus) mapStatus.textContent = "Consent is on. Share your location to show it on the map.";
+      const location = readLocation();
+      if (location) {
+        name.textContent = "Finding your area…";
+        status.textContent = location.manuallyAdjusted
+          ? "Using your manually adjusted map location."
+          : `Using saved GPS location (accuracy ±${Math.round(location.accuracy || 0)} m).`;
+        updateLocationName(location);
       }
     } catch (error) {
       status.textContent = "Could not save your location consent in this browser.";
       console.error("Could not save location consent.", error);
     }
   });
-
+  // Get precise GPS only when the user explicitly asks to share their location.
   shareButton.addEventListener("click", () => {
     if (!consent.checked) return;
     if (!navigator.geolocation) {
@@ -187,40 +163,38 @@
     shareButton.disabled = true;
     consent.disabled = true;
     status.textContent = "Requesting your location…";
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        };
-        try {
-          localStorage.setItem(locationKey, JSON.stringify(location));
-          localStorage.setItem(consentKey, "true");
-          name.textContent = "Finding your area…";
-          status.textContent = `Location saved in this browser (GPS accuracy ±${Math.round(location.accuracy)} m).`;
-          delete location.manuallyAdjusted;
-          updateLocationName(location);
-          shareButton.textContent = "Change my location";
-        } catch (error) {
-          status.textContent = "Location was found but could not be saved in this browser.";
-          console.error("Could not save the current location.", error);
-        } finally {
-          shareButton.dataset.loading = "false";
-          consent.disabled = false;
-          shareButton.disabled = !consent.checked;
-        }
-      },
-      (error) => {
-        status.textContent = error.code === error.PERMISSION_DENIED
-          ? "Location permission was denied. Allow it in your browser settings to continue."
-          : "Your location could not be determined. Please try again.";
-        if (mapStatus) mapStatus.textContent = status.textContent;
-        shareButton.dataset.loading = "false";
-        consent.disabled = false;
-        shareButton.disabled = !consent.checked;
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
-    );
+
+    const finish = () => {
+      shareButton.dataset.loading = "false";
+      consent.disabled = false;
+      shareButton.disabled = !consent.checked;
+    };
+
+    navigator.geolocation.getCurrentPosition((position) => {
+      const location = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+      };
+      try {
+        localStorage.setItem(locationKey, JSON.stringify(location));
+        localStorage.setItem(consentKey, "true");
+        name.textContent = "Finding your area…";
+        status.textContent = `Location saved in this browser (GPS accuracy ±${Math.round(location.accuracy)} m).`;
+        updateLocationName(location);
+        shareButton.textContent = "Change my location";
+      } catch (error) {
+        status.textContent = "Location was found but could not be saved in this browser.";
+        console.error("Could not save the current location.", error);
+      } finally {
+        finish();
+      }
+    }, (error) => {
+      status.textContent = error.code === error.PERMISSION_DENIED
+        ? "Location permission was denied. Allow it in your browser settings to continue."
+        : "Your location could not be determined. Please try again.";
+      if (mapStatus) mapStatus.textContent = status.textContent;
+      finish();
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   });
 })();

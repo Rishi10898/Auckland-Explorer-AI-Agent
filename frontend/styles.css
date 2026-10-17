@@ -856,7 +856,6 @@ textarea {
 .destination-card {
     display: flex;
     flex-direction: column;
-    height: 440px;
     min-height: 440px;
     padding: 20px;
     overflow: hidden;
@@ -928,6 +927,26 @@ textarea {
     overflow-wrap: anywhere;
     white-space: normal;
     font-size: 0.82rem;
+}
+
+.destination-ask-button {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 12px;
+    border-color: var(--theme-accent, var(--cyan));
+    background: var(--theme-accent, var(--cyan));
+    color: var(--theme-bg, #050816);
+    font-weight: 700;
+    text-align: center;
+}
+
+.destination-ask-button:hover {
+    filter: brightness(0.92);
+}
+
+.destination-ask-button:focus-visible {
+    outline: 3px solid var(--theme-text, var(--text));
+    outline-offset: 3px;
 }
 
 .region-grid {
