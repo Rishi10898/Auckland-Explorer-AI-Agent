@@ -343,6 +343,13 @@ let distanceCalculationVersion = 0;
     const map = new URL("https://www.google.com/maps/search/");
     map.searchParams.set("api", "1");
     map.searchParams.set("query", `${name}, ${regionDetails[0]}, Auckland, New Zealand`);
+    const chat = new URL("../chat.html", window.location.href);
+    chat.searchParams.set(
+      "prompt",
+      `Tell me about ${name}, ${
+        category === "attractions" ? "an attraction" : `a ${categoryDetails[2].toLowerCase()}`
+      } in Auckland.`
+    );
     const info = OFFICIAL_INFO[name] ||
       `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(`${name} Auckland`)}`;
     return `
@@ -358,6 +365,7 @@ let distanceCalculationVersion = 0;
             <a class="btn btn-secondary info-link" href="${info}" target="_blank" rel="noopener noreferrer">More info</a>
           </div>
         </div>
+        <a class="btn btn-primary destination-ask-button" href="${safeText(chat.href)}">✨ Ask Auckland Explorer</a>
       </article>
     `;
   }).join("");

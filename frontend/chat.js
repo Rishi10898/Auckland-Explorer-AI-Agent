@@ -12,7 +12,7 @@ function setupEvents() {
     document.querySelectorAll("[data-prompt]").forEach((button) => {
         button.addEventListener("click", () => {
             input.value = button.dataset.prompt;
-            sendMessage();
+            input.focus();
         });
     });
     document.getElementById("locateBtn").addEventListener("click", getUserLocation);
@@ -109,6 +109,7 @@ function loadPlaceFromURL() {
     } else if (place) {
         input.value = `Tell me about ${place}`;
     }
+    if (prompt || place) input.focus();
 }
 function escapeHTML(e) {
     const t = document.createElement("div");

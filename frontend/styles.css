@@ -856,7 +856,6 @@ textarea {
 .destination-card {
     display: flex;
     flex-direction: column;
-    height: 440px;
     min-height: 440px;
     padding: 20px;
     overflow: hidden;
@@ -928,6 +927,13 @@ textarea {
     overflow-wrap: anywhere;
     white-space: normal;
     font-size: 0.82rem;
+}
+
+.destination-ask-button {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 12px;
+    text-align: center;
 }
 
 .region-grid {
