@@ -1187,6 +1187,17 @@ textarea {
     font-size: .76rem;
 }
 .chat-location-note a { color: var(--cyan); text-decoration: underline; }
+.preference-note {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin: 0 2px 8px;
+    color: var(--muted);
+    font-size: .72rem;
+}
+.preference-note label { display: inline-flex; align-items: center; gap: 5px; }
+.preference-note input { accent-color: var(--cyan); }
 .chat-input-row { display: flex; gap: 8px; }
 .chat-input-row input { min-width: 0; flex: 1; }
 .chat-input-row button { width: 48px; font-size: 1.2rem; }
