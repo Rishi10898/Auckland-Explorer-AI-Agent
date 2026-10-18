@@ -81,10 +81,6 @@ Live API verification requires your own provider credentials, sends location dat
 6. Add `GEMINI_API_KEY_1` and `TOMTOM_API_KEY`; add `OPEN_WEATHER_API_KEY` for weather, more Gemini keys for eligible transient failures, and `NVIDIA_API_KEY` only if you want that fallback. Enter secrets in Render's environment settings, never in the Blueprint or browser code.
 7. Create and deploy the new staging service. Check its `/health`, `/`, `/chat.html`, and `/docs` routes, then test the chat. This same-origin service needs no extra CORS origin.
 
-Free web services sleep after 15 minutes without traffic and can take about a minute to wake. They use ephemeral filesystems and share monthly workspace instance-hours, bandwidth, and build limits. Check Render's [Free instance limits](https://render.com/docs/free) before deploying. Do not change the production URL or deploy the full Blueprint without reviewing its production service entry.
-
-Provider usage may still incur charges independently of Render's free compute. To disable staging, remove or suspend only the separately named staging service; leave GitHub Pages and the current production service untouched.
-
 ## Current limitations
 
 - The result map uses the public OpenStreetMap tile service with attribution. It is intended for modest use, not as a guaranteed unlimited production tile service; review its current usage policy and move to a suitable provider if traffic grows.
