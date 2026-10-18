@@ -7,7 +7,10 @@ const API_URL = window.AUCKLAND_EXPLORER_API_URL;
 const DEFAULT_LOCATION = { latitude: -36.8485, longitude: 174.7633 };
 const LOCATION_KEY = "aucklandExplorerUserLocation";
 const CONSENT_KEY = "aucklandExplorerLocationConsent";
+const PREFERENCES_KEY = "aucklandExplorerChatPreferences";
 const RADIUS_OPTIONS = [2000, 3000, 5000];
+const CATEGORIES = ["all", "BEACH", "PARK_RECREATION_AREA", "TOURIST_ATTRACTION"];
+const TRAVEL_MODES = ["public_transport", "drive", "cycle", "walk"];
 const chatThread = document.getElementById("chatThread");
 const chatForm = document.getElementById("chatForm");
 const input = document.getElementById("fInput");
@@ -31,18 +34,83 @@ function initialiseChat() {
     document.getElementById("shareLocation").addEventListener("click", requestLocation);
     document.getElementById("useDefaultLocation").addEventListener("click", useDefaultLocation);
     document.getElementById("forgetLocation").addEventListener("click", forgetLocation);
-    document.getElementById("fRadius").addEventListener("change", refreshLastResult);
+    document.getElementById("fRadius").addEventListener("change", () => {
+        refreshLastResult();
+        savePreferences();
+    });
+    document.getElementById("fCategory").addEventListener("change", savePreferences);
+    document.getElementById("fMode").addEventListener("change", savePreferences);
+    document.getElementById("rememberPreferences").addEventListener(
+        "change",
+        togglePreferenceSaving,
+    );
     document.querySelectorAll("[data-prompt]").forEach((button) => {
         button.addEventListener("click", () => {
             input.value = button.dataset.prompt;
             if (button.dataset.category) {
                 document.getElementById("fCategory").value = button.dataset.category;
             }
+            savePreferences();
             input.focus();
         });
     });
+    restorePreferences();
     restoreConsentedLocation();
     loadPlaceFromUrl();
+}
+
+function restorePreferences() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || "null");
+        if (!saved) return;
+        if (CATEGORIES.includes(saved.category)) {
+            document.getElementById("fCategory").value = saved.category;
+        }
+        if (RADIUS_OPTIONS.includes(saved.radius)) {
+            document.getElementById("fRadius").value = String(saved.radius);
+        }
+        if (TRAVEL_MODES.includes(saved.transport)) {
+            document.getElementById("fMode").value = saved.transport;
+        }
+        document.getElementById("preferenceStatus").textContent =
+            "Saved choices restored. Prompts and location are not saved.";
+    } catch {
+        document.getElementById("preferenceStatus").textContent =
+            "Saved choices could not be read; using defaults.";
+    }
+}
+
+function savePreferences() {
+    const remember = document.getElementById("rememberPreferences");
+    if (!remember.checked) return;
+    const saved = {
+        category: document.getElementById("fCategory").value,
+        radius: Number(document.getElementById("fRadius").value),
+        transport: document.getElementById("fMode").value,
+    };
+    try {
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify(saved));
+        document.getElementById("preferenceStatus").textContent =
+            "Choices saved on this device. Prompts and location are not saved.";
+    } catch {
+        document.getElementById("preferenceStatus").textContent =
+            "Choices will last for this visit; browser storage is unavailable.";
+    }
+}
+
+function togglePreferenceSaving(event) {
+    if (event.currentTarget.checked) {
+        savePreferences();
+        return;
+    }
+    try {
+        localStorage.removeItem(PREFERENCES_KEY);
+        document.getElementById("preferenceStatus").textContent =
+            "Saved choices removed. Prompts and location are not saved.";
+    } catch {
+        document.getElementById("preferenceStatus").textContent =
+            "Could not remove saved choices; clear this site's browser data.";
+    }
 }
 
 function restoreConsentedLocation() {
@@ -152,9 +220,15 @@ async function sendMessage(event) {
     addUserMessage(prompt);
     sendButton.disabled = true;
     setLocationStatus("Finding verified nearby places…", "loading");
-    serverStatus.textContent = "Checking places, weather, and safety…";
+    const startedAt = performance.now();
+    const updateProgress = () => {
+        const seconds = ((performance.now() - startedAt) / 1000).toFixed(1);
+        serverStatus.textContent = `Checking live data and preparing suggestions · ${seconds}s`;
+    };
+    updateProgress();
+    const progressTimer = window.setInterval(updateProgress, 250);
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 45000);
+    const timeout = window.setTimeout(() => controller.abort(), 120000);
 
     try {
         if (!API_URL) throw new Error("The recommendation API is not configured.");
@@ -179,18 +253,20 @@ async function sendMessage(event) {
             data.ai_provider === "nvidia" ? "Ready · NVIDIA fallback" : "Ready · Gemini",
             "success",
         );
-        serverStatus.textContent = data.ai_provider === "nvidia"
-            ? "Recommendations prepared using NVIDIA fallback."
-            : "Recommendations prepared using Gemini.";
+        const elapsed = ((performance.now() - startedAt) / 1000).toFixed(1);
+        const provider = data.ai_provider === "nvidia" ? "NVIDIA fallback" : "Gemini";
+        serverStatus.textContent = `Ready in ${elapsed}s · ${provider}.`;
     } catch (error) {
         const message = error.name === "AbortError"
             ? "The request timed out. Please try again."
             : error.message || "The recommendation service is unavailable.";
         addErrorMessage(message);
         setLocationStatus("Request failed", "error");
-        serverStatus.textContent = "No recommendation was returned. Retry when ready.";
+        const elapsed = ((performance.now() - startedAt) / 1000).toFixed(1);
+        serverStatus.textContent = `Request failed after ${elapsed}s. Retry when ready.`;
     } finally {
         window.clearTimeout(timeout);
+        window.clearInterval(progressTimer);
         requestInFlight = false;
         sendButton.disabled = false;
         input.focus();

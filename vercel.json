@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "http://localhost:3000/api/$1"
+            "destination": "https://auckland-explorer-ai-agent-api.onrender.com/api/$1"
         }
     ]
 }
