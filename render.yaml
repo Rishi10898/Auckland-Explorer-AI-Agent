@@ -10,6 +10,12 @@ services:
     buildCommand: pip install -r app/requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GEMINI_API_KEY_2
+        sync: false
+      - key: GEMINI_API_KEY_3
+        sync: false
       - key: NVIDIA_API_KEY
         sync: false
       - key: OPEN_WEATHER_API_KEY
