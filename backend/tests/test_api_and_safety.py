@@ -170,6 +170,43 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(response.json()["detail"]["error_code"], "AI_QUOTA_EXCEEDED")
         self.assertIn("quota", response.json()["detail"]["message"].lower())
 
+    def test_missing_ai_resource_is_a_clear_503(self):
+        with (
+            patch(
+                "app.main.fetch_realtime_environmental_alerts",
+                new=AsyncMock(
+                    return_value={
+                        "notice": UNVERIFIED_NOTICE,
+                        "status": "unverified",
+                        "source": SAFESWIM_SOURCE,
+                    }
+                ),
+            ),
+            patch(
+                "app.main.generate_location_recommendations",
+                new=AsyncMock(
+                    side_effect=RecommendationError("AI_RESOURCE_NOT_FOUND")
+                ),
+            ),
+        ):
+            response = self.client.post(
+                "/api/chat",
+                json={
+                    "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
+                    "user_intent_prompt": "Find a park",
+                },
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json()["detail"]["error_code"],
+            "AI_RESOURCE_NOT_FOUND",
+        )
+        self.assertIn(
+            "could not find the configured model",
+            response.json()["detail"]["message"],
+        )
+
     def test_unexpected_error_is_logged_without_raw_details(self):
         with (
             self.assertLogs("auckland_explorer.core", level="ERROR") as logs,

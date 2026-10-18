@@ -48,6 +48,13 @@ def _public_error_message(code: str) -> str:
         return "AI quota is currently exhausted. Please try again later."
     if code == "AI_PROVIDERS_NOT_CONFIGURED":
         return "No AI provider is configured for recommendations."
+    if code == "AI_RESOURCE_NOT_FOUND":
+        return (
+            "The AI provider could not find the configured model or generation "
+            "operation. Check provider model access."
+        )
+    if code == "AI_PROVIDER_RESOURCE_GONE":
+        return "A configured AI provider resource is no longer available."
     if code == "LIVE_PLACE_SEARCH_UNAVAILABLE":
         return "Nearby places could not be verified. Please try again later."
     if code == "AI_INVALID_RESPONSE":

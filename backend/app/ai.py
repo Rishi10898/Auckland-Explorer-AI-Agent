@@ -208,6 +208,8 @@ def _generate_text(prompt: str) -> tuple[str, str]:
             _log_provider_failure("Gemini", error)
             if error.category == "quota":
                 raise RecommendationError("AI_QUOTA_EXCEEDED") from error
+            if error.category in {"invalid_request", "not_found", "gone"}:
+                break
 
     if settings.nvidia_api_key:
         try:
@@ -221,6 +223,10 @@ def _generate_text(prompt: str) -> tuple[str, str]:
         raise RecommendationError("AI_QUOTA_EXCEEDED")
     if last_category == "not_configured":
         raise RecommendationError("AI_PROVIDERS_NOT_CONFIGURED")
+    if last_category == "not_found":
+        raise RecommendationError("AI_RESOURCE_NOT_FOUND")
+    if last_category == "gone":
+        raise RecommendationError("AI_PROVIDER_RESOURCE_GONE")
     raise RecommendationError("AI_PROVIDERS_UNAVAILABLE")
 
 
