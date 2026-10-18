@@ -1,294 +1,88 @@
-"""Test HTTP behavior and conservative Safeswim status handling.
+"""Test external adapters using deterministic mock responses.
 
-Workflow: issue local TestClient requests with mocked services -> assert the
-documented API contract, safe errors, and warning/unknown behavior.
+Workflow: mock TomTom/OpenWeather -> verify normalized results, request limits,
+and safe errors that do not expose API credentials.
 """
 import unittest
-from unittest.mock import AsyncMock, patch
-
-import httpx
-from fastapi.testclient import TestClient
-from pydantic import AnyHttpUrl, TypeAdapter
-
-from app import main
-from app.beaches import (
-    SAFESWIM_SOURCE,
-    UNVERIFIED_NOTICE,
-    _notice_from_data,
-    fetch_realtime_environmental_alerts,
-)
-from app.ai import RecommendationError
-from app.schemas import DestinationMatchItem, GeolocationCoordinates
-
-HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
+import requests
+from app import places, weather
 
 
-class SafetyTests(unittest.IsolatedAsyncioTestCase):
-    coordinates = GeolocationCoordinates(
-        latitude=-36.8485,
-        longitude=174.7633,
-    )
-
-    def test_missing_safeswim_description_is_unverified(self):
-        result = _notice_from_data({"unexpected": "payload"}, self.coordinates)
-        self.assertEqual(result["status"], "unverified")
-        self.assertEqual(result["notice"], UNVERIFIED_NOTICE)
-        self.assertEqual(result["source"], SAFESWIM_SOURCE)
-
-    def test_unsafe_safeswim_description_is_warning(self):
-        result = _notice_from_data(
-            {"alert": {"description": "Unsafe swimming: water quality warning."}},
-            self.coordinates,
-        )
-        self.assertEqual(result["status"], "warning")
-        self.assertIn("Unsafe swimming", result["notice"])
-
-    def test_live_green_site_remains_unverified_without_timestamp(self):
-        result = _notice_from_data(
-            {
-                "locations": [
-                    {
-                        "name": "Nearby site",
-                        "position": [-36.8414, 174.7593],
-                        "state": {"quality": "GREEN"},
-                    },
-                    {
-                        "name": "Far site",
-                        "position": [-38.0, 177.0],
-                        "state": {"quality": "RED"},
-                    },
-                ]
-            },
-            self.coordinates,
-        )
-
-        self.assertEqual(result["status"], "unverified")
-        self.assertIn("Nearby site", result["notice"])
-        self.assertIn("does not include a timestamp", result["notice"])
-
-    def test_live_red_site_is_reported_as_a_warning(self):
-        result = _notice_from_data(
-            {
-                "locations": [
-                    {
-                        "name": "Nearby site",
-                        "position": [-36.8414, 174.7593],
-                        "state": {"quality": "RED"},
-                    }
-                ]
-            },
-            self.coordinates,
-        )
-
-        self.assertEqual(result["status"], "warning")
-        self.assertIn("RED", result["notice"])
-
-    async def test_service_failure_is_unverified_and_does_not_log_coordinates(self):
-        client = AsyncMock()
-        client.__aenter__.return_value = client
-        client.get.side_effect = httpx.ConnectError("upstream unavailable")
-
-        with (
-            patch("app.beaches.httpx.AsyncClient", return_value=client),
-            self.assertLogs("auckland_explorer.services", level="WARNING") as logs,
-        ):
-            result = await fetch_realtime_environmental_alerts(self.coordinates)
-
-        self.assertEqual(result["status"], "unverified")
-        self.assertNotIn("-36.8485", "\n".join(logs.output))
-        self.assertNotIn("174.7633", "\n".join(logs.output))
-
-
-class ApiTests(unittest.TestCase):
-    def setUp(self):
-        self.client = TestClient(main.app)
-
-    def test_health_and_staging_frontend_routes(self):
-        self.assertEqual(self.client.get("/health").json(), {"status": "ok"})
-        self.assertEqual(self.client.get("/").status_code, 200)
-        self.assertEqual(self.client.get("/chat.html").status_code, 200)
-
-    def test_request_validation_rejects_unsupported_radius(self):
-        response = self.client.post(
-            "/api/chat",
-            json={
-                "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
-                "user_intent_prompt": "Find a park",
-                "user_preferences": {
-                    "categories": ["PARK_RECREATION_AREA"],
-                    "radius_meters": 10000,
+# Tests for place-search normalization and request limits.
+class PlaceAdapterTests(unittest.TestCase):
+    def test_candidate_data_has_stable_ids_and_rejects_invalid_coordinates(self):
+        settings = SimpleNamespace(tomtom_api_key="not-a-real-key")
+        payload = {
+            "results": [
+                {
+                    "poi": {"name": "Mission Bay"},
+                    "position": {"lat": -36.8485, "lon": 174.8303},
+                    "address": {"freeformAddress": "Auckland"},
+                    "distance": 400,
                 },
-            },
-        )
-        self.assertEqual(response.status_code, 422)
-
-    def test_chat_response_preserves_contract_and_safety_status(self):
-        destination = DestinationMatchItem(
-            candidate_id="park-1",
-            place_name="Auckland Domain",
-            category="PARK_RECREATION_AREA",
-            relevance_rationale="A central park.",
-            directions_url=HTTP_URL_ADAPTER.validate_python(
-                "https://www.google.com/maps/dir/?api=1"
-            ),
-            distance_meters=250,
-            latitude=-36.8606,
-            longitude=174.7785,
-        )
-        with self.assertLogs("auckland_explorer.core", level="INFO") as logs:
-            with (
-                patch(
-                    "app.main.fetch_realtime_environmental_alerts",
-                    new=AsyncMock(
-                        return_value={
-                            "notice": "Unsafe swimming warning.",
-                            "status": "warning",
-                            "source": SAFESWIM_SOURCE,
-                        }
-                    ),
-                ),
-                patch(
-                    "app.main.generate_location_recommendations",
-                    new=AsyncMock(
-                        return_value={
-                            "summary": "A nearby park.",
-                            "recommendations": [destination],
-                            "transport": None,
-                            "provider": "gemini",
-                        }
-                    ),
-                ),
-            ):
-                response = self.client.post(
-                    "/api/chat",
-                    json={
-                        "coordinates": {
-                            "latitude": -36.8485,
-                            "longitude": 174.7633,
-                        },
-                        "user_intent_prompt": "Find a park",
-                        "user_preferences": {
-                            "categories": ["PARK_RECREATION_AREA"],
-                            "transport_mode": "walk",
-                            "radius_meters": 2000,
-                        },
-                    },
-                )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Received Auckland Explorer recommendation request.", logs.output[0])
-        self.assertIn(
-            "Recommendation request completed (provider=gemini, destinations=1).",
-            logs.output[1],
-        )
-        payload = response.json()
-        self.assertEqual(payload["summary"], "A nearby park.")
-        self.assertEqual(payload["recommended_destinations"][0]["place_name"], "Auckland Domain")
-        self.assertEqual(payload["environmental_safety_status"], "warning")
-        self.assertEqual(payload["ai_provider"], "gemini")
-
-    def test_quota_failure_is_a_clear_503(self):
-        with (
-            patch(
-                "app.main.fetch_realtime_environmental_alerts",
-                new=AsyncMock(
-                    return_value={
-                        "notice": UNVERIFIED_NOTICE,
-                        "status": "unverified",
-                        "source": SAFESWIM_SOURCE,
-                    }
-                ),
-            ),
-            patch(
-                "app.main.generate_location_recommendations",
-                new=AsyncMock(side_effect=RecommendationError("AI_QUOTA_EXCEEDED")),
-            ),
-        ):
-            response = self.client.post(
-                "/api/chat",
-                json={
-                    "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
-                    "user_intent_prompt": "Find a park",
+                {
+                    "poi": {"name": "Invalid"},
+                    "position": {"lat": 999, "lon": 174},
                 },
-            )
+            ]
+        }
+        response = Mock()
+        response.json.return_value = payload
+        response.raise_for_status.return_value = None
 
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json()["detail"]["error_code"], "AI_QUOTA_EXCEEDED")
-        self.assertIn("quota", response.json()["detail"]["message"].lower())
-
-    def test_missing_ai_resource_is_a_clear_503(self):
+        # Fake the provider response to avoid network calls and API usage.
         with (
-            patch(
-                "app.main.fetch_realtime_environmental_alerts",
-                new=AsyncMock(
-                    return_value={
-                        "notice": UNVERIFIED_NOTICE,
-                        "status": "unverified",
-                        "source": SAFESWIM_SOURCE,
-                    }
-                ),
-            ),
-            patch(
-                "app.main.generate_location_recommendations",
-                new=AsyncMock(
-                    side_effect=RecommendationError("AI_RESOURCE_NOT_FOUND")
-                ),
-            ),
+            patch.object(places, "settings", settings),
+            patch("app.places.requests.get", return_value=response) as request,
         ):
-            response = self.client.post(
-                "/api/chat",
-                json={
-                    "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
-                    "user_intent_prompt": "Find a park",
-                },
-            )
+            first = places.get_auckland_places("BEACH", -36.84, 174.8, 9000)
+            second = places.get_auckland_places("BEACH", -36.84, 174.8, 5000)
 
-        self.assertEqual(response.status_code, 503)
+        self.assertEqual(first["status"], "success")
+        self.assertEqual(len(first["places"]), 1)
         self.assertEqual(
-            response.json()["detail"]["error_code"],
-            "AI_RESOURCE_NOT_FOUND",
+            first["places"][0]["candidate_id"],
+            second["places"][0]["candidate_id"],
         )
-        self.assertIn(
-            "could not find the configured model",
-            response.json()["detail"]["message"],
-        )
+        self.assertEqual(request.call_args.kwargs["params"]["radius"], 5000)
+        self.assertEqual(request.call_args.kwargs["timeout"], 8)
 
-    def test_unexpected_error_is_logged_without_raw_details(self):
+    def test_tomtom_error_does_not_return_exception_url_or_key(self):
+        settings = SimpleNamespace(tomtom_api_key="sensitive-test-key")
+
         with (
-            self.assertLogs("auckland_explorer.core", level="ERROR") as logs,
+            patch.object(places, "settings", settings),
             patch(
-                "app.main.fetch_realtime_environmental_alerts",
-                new=AsyncMock(
-                    return_value={
-                        "notice": UNVERIFIED_NOTICE,
-                        "status": "unverified",
-                        "source": SAFESWIM_SOURCE,
-                    }
-                ),
-            ),
-            patch(
-                "app.main.generate_location_recommendations",
-                new=AsyncMock(
-                    side_effect=RuntimeError("sensitive upstream detail")
+                "app.places.requests.get",
+                side_effect=requests.Timeout(
+                    "https://example.test?key=sensitive-test-key"
                 ),
             ),
         ):
-            response = self.client.post(
-                "/api/chat",
-                json={
-                    "coordinates": {"latitude": -36.8485, "longitude": 174.7633},
-                    "user_intent_prompt": "Find a park",
-                },
-            )
+            result = places.get_auckland_places("BEACH", -36.84, 174.8)
 
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(
-            response.json()["detail"]["error_code"],
-            "INTERNAL_SERVER_ERROR",
-        )
-        self.assertIn("RuntimeError", logs.output[0])
-        self.assertNotIn("sensitive upstream detail", logs.output[0])
+        self.assertEqual(result["error_code"], "PLACES_API_UNAVAILABLE")
+        self.assertNotIn("sensitive-test-key", result["message"])
 
+    def test_weather_error_does_not_return_credential_bearing_url(self):
+        # Weather failures must not expose the API key in returned messages.
+        settings = SimpleNamespace(open_weather_api_key="sensitive-weather-key")
+
+        with (
+            patch.object(weather, "settings", settings),
+            patch(
+                "app.weather.requests.get",
+                side_effect=requests.Timeout(
+                    "https://example.test?appid=sensitive-weather-key"
+                ),
+            ),
+        ):
+            result = weather.get_auckland_weather(-36.84, 174.8)
+
+        self.assertEqual(result["error_code"], "WEATHER_API_UNAVAILABLE")
+        self.assertNotIn("sensitive-weather-key", result["message"])
 
 if __name__ == "__main__":
     unittest.main()

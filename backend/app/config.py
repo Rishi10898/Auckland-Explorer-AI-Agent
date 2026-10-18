@@ -5,18 +5,14 @@ Workflow: local .env or deployment environment -> typed settings -> API/provider
 """
 import os
 from dataclasses import dataclass
-
 from dotenv import load_dotenv
-
 load_dotenv()
-
-
 @dataclass(frozen=True)
 class Settings:
     """Store non-secret defaults and API credentials without logging values."""
 
     gemini_api_key: str = os.getenv("GEMINI_API_KEY_1", "").strip()
-    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     nvidia_api_key: str = os.getenv("NVIDIA_API_KEY", "").strip()
     nvidia_model: str = os.getenv(
         "NVIDIA_MODEL",
@@ -37,6 +33,4 @@ class Settings:
         if origin.strip()
     )
     frontend_directory: str = os.getenv("FRONTEND_DIR", "")
-
-
 settings = Settings()
