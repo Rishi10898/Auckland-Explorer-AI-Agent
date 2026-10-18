@@ -8,6 +8,9 @@ The existing static site remains on GitHub Pages. The existing Render API servic
 ## What the chat does
 
 - Keeps free-text prompts and adds category, radius (2/3/5 km), and travel-mode choices.
+- Remembers category, radius, and travel choices in browser storage when enabled; it never saves chat prompts or adds stored choices to provider calls beyond the current request.
+- Clearly labels “All categories” as three place searches. The backend limits AI context to the five closest verified candidates per selected category to keep prompts bounded.
+- Shows the request's elapsed time and operational progress, not private model reasoning.
 - Uses Auckland Central when location is not shared. Browser geolocation is requested only after the user explicitly chooses to share.
 - Saves precise coordinates in the browser only after consent. The backend uses them for TomTom place search, OpenWeather, Safeswim, distance checks, and the Auckland Transport planner link. The result map requests OpenStreetMap tiles for its displayed area. Coordinates are not added to the Gemini/NVIDIA prompt or application logs.
 - Sends candidate IDs, nearby place names/categories, the user's prompt/preferences, and available weather to the AI provider. Nearby names and weather can still imply an approximate area.
@@ -31,6 +34,8 @@ TOMTOM_API_KEY
 
 Gemini requests use the three configured project keys in order. A Gemini quota/429 response stops the Gemini sequence instead of rotating keys to evade a limit. Other temporary failures may fall through to another configured Gemini project and then NVIDIA. Separate projects do not guarantee independent account, billing, or model limits. Monitor each project's active limits and billing independently.
 
+The production Render service is API-only and the deployed GitHub Pages frontend calls it. Add `GEMINI_API_KEY_1` to that existing service's environment settings to use Gemini; `_2` and `_3` are optional fallback slots. `render.yaml` lists these variable names, but existing Render services must have newly added `sync: false` secrets entered manually in the dashboard. Do not paste keys into source files.
+
 For a staging deployment, set `FRONTEND_DIR=frontend`. Set `CORS_ORIGINS` to a comma-separated list of trusted frontend origins only when cross-origin requests are needed; same-origin Render staging does not require browser CORS.
 
 ## Local development
@@ -43,7 +48,7 @@ python -m pip install -r app/requirements.txt
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --log-level info
 ```
 
-Run these commands from the `backend` directory. Open `http://127.0.0.1:8000/chat.html` (not a `file://` page) so the browser uses the local API. Each submitted chat request logs a received and completed line in the terminal, but intentionally does not log the prompt or coordinates. `/`, `/docs`, and `/health` are also available.
+Run these commands from the `backend` directory. Open `http://127.0.0.1:8000/chat.html` (not a `file://` page) so the browser uses the local API. Each submitted chat request logs a received and completed line in the terminal, but intentionally does not log the prompt or coordinates. `/`, `/docs`, and `/health` are also available. A successful `/health` check does not verify provider credentials; use a real chat request to confirm the displayed provider.
 
 ## Tests and local visual checks
 
@@ -71,7 +76,9 @@ Live API verification requires your own provider credentials, sends location dat
 
 ## Render staging (separate from production)
 
-`render.yaml` retains the current production service definition and adds a separately named `auckland-explorer-ai-agent-staging` web service. Because the Blueprint contains both services, use the dashboard steps below to create staging alone and avoid changing the existing production service.
+`render.yaml` retains the current production service definition and adds a separately named `auckland-explorer-ai-agent-staging` web service. The production GitHub Pages frontend already targets the production API. To connect it to Gemini, add `GEMINI_API_KEY_1` (and optional `_2`/`_3`) to the existing `auckland-explorer-ai-agent-api` service in **Render Dashboard → service → Environment**, then save and redeploy that backend service. Do not deploy the entire Blueprint just to add a key.
+
+Because the Blueprint contains both services, use the dashboard steps below to create staging alone and avoid changing the existing production service.
 
 1. In Render, choose **New → Web Service**, connect this repository, and select the intended branch.
 2. Set **Root Directory** to `.`, **Runtime** to Python, and **Instance Type** to Free.
