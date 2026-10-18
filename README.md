@@ -3,7 +3,7 @@
 **Purpose:** help people discover Auckland destinations using their request, optional location, current weather, and verified nearby place-search results.
 **Workflow:** browser chat → consented coordinates and guided preferences → FastAPI queries TomTom, OpenWeather, and Safeswim → Gemini selects from verified candidates (NVIDIA fallback) → validated cards and Leaflet map.
 
-The existing static site remains on GitHub Pages. The existing Render API service is preserved; a separate Render staging service can serve both the API and frontend. The optional Vercel rewrite proxies `/api/*` to the same Render API.
+The existing static site remains on GitHub Pages. The existing Render API service is preserved; a separate Render staging service can serve both the API and frontend.
 
 ## What the chat does
 
