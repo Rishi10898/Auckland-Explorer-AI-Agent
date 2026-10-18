@@ -4,6 +4,7 @@ Purpose: expose validated API routes and serve the frontend when deployed with
 the staging bundle. Workflow: request -> schemas/services -> privacy-safe response.
 """
 import logging
+import traceback
 from pathlib import Path
 
 import uvicorn
@@ -104,9 +105,12 @@ async def generate_regional_destination_matches(
             },
         ) from error
     except Exception as error:
+        frame = traceback.extract_tb(error.__traceback__)[-1]
         logger.error(
-            "Unexpected recommendation error (%s).",
+            "Unexpected recommendation error (%s at %s:%s).",
             type(error).__name__,
+            Path(frame.filename).name,
+            frame.lineno,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
