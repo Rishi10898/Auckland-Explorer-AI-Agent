@@ -19,26 +19,6 @@ The existing static site remains on GitHub Pages. The existing Render API servic
 - Displays a separate swimming safety notice. Missing/unavailable Safeswim data is “unverified”, never an automatic safe/green result.
 - Does not enable Google Maps grounding. As currently documented, Maps grounding has no free-tier availability and can incur usage charges. Directions are ordinary outbound links; no Google Maps API is called.
 
-## Configuration
-
-Set credentials as environment variables or in the ignored `backend/.env` file for local work. Never put values in frontend files or commit them.
-
-For recommendations, configure `GEMINI_API_KEY_1` and the TomTom key. `NVIDIA_API_KEY` is the fallback if Gemini is unavailable. Add OpenWeather for live weather context.
-
-```text
-GEMINI_API_KEY_1
-NVIDIA_API_KEY
-TOMTOM_API_KEY
-```
-
-`OPEN_WEATHER_API_KEY`, `AT_API_KEY`, and `AT_REALTIME_URL` are optional. Without AT realtime credentials, the app provides the public AT Journey Planner link but does not claim live route or fare data. `GEMINI_MODEL` defaults to `gemini-3.8-flash`; `NVIDIA_MODEL` defaults to `deepseek-ai/deepseek-v4.1-flash`. These defaults are currently listed in their providers' catalogs.
-
-Gemini uses the documented Interactions API with `gemini-3.8-flash`, JSON-schema output, and the single primary key. The SDK requirement is `google-genai>=2.31.0,<3.0.0`. Gemini and NVIDIA each receive a bounded timeout and at most one retry for transient timeouts or service/network failures. Permanent failures are not retried; the app falls back to NVIDIA without rotating Gemini keys. See the [Gemini model list](https://ai.google.dev/gemini-api/docs/models), [Interactions API guide](https://ai.google.dev/gemini-api/docs/interactions-overview), [structured output guide](https://ai.google.dev/gemini-api/docs/structured-output), and [NVIDIA NIM model/API guide](https://docs.api.nvidia.com/nim/docs/models).
-
-The production Render service is API-only and the deployed GitHub Pages frontend calls it. In the existing service's environment settings, retain or add `GEMINI_API_KEY_1` and `NVIDIA_API_KEY`; remove obsolete `GEMINI_API_KEY_2` and `GEMINI_API_KEY_3` entries if present. Remove or update any stale `GEMINI_MODEL` or `NVIDIA_MODEL` overrides to the defaults above. Existing Render services must have new `sync: false` secrets entered manually in the dashboard. Do not paste keys into source files.
-
-For a staging deployment, set `FRONTEND_DIR=frontend`. Set `CORS_ORIGINS` to a comma-separated list of trusted frontend origins only when cross-origin requests are needed; same-origin Render staging does not require browser CORS.
-
 ## Local development
 
 Use Python 3.11+ and install the pinned/ranged backend dependencies:
@@ -75,20 +55,6 @@ Backend tests mock external services and AI providers; they do not make live, bi
 6. `/health`, `/`, `/chat.html`, and `/docs` load through the FastAPI server.
 
 Live API verification requires your own provider credentials, sends location data to external services, and may incur provider charges. It is not part of the automated test suite.
-
-## Render staging (separate from production)
-
-`render.yaml` retains the current production service definition and adds a separately named `auckland-explorer-ai-agent-staging` web service. The production GitHub Pages frontend already targets the production API. To connect it to Gemini, add `GEMINI_API_KEY_1` (and optional `_2`/`_3`) to the existing `auckland-explorer-ai-agent-api` service in **Render Dashboard → service → Environment**, then save and redeploy that backend service. Do not deploy the entire Blueprint just to add a key.
-
-Because the Blueprint contains both services, use the dashboard steps below to create staging alone and avoid changing the existing production service.
-
-1. In Render, choose **New → Web Service**, connect this repository, and select the intended branch.
-2. Set **Root Directory** to `.`, **Runtime** to Python, and **Instance Type** to Free.
-3. Set **Build Command** to `pip install -r backend/app/requirements.txt`.
-4. Set **Start Command** to `uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT`.
-5. Set **Health Check Path** to `/health` and add `FRONTEND_DIR=frontend`.
-6. Add `GEMINI_API_KEY_1`, `NVIDIA_API_KEY`, and `TOMTOM_API_KEY`; add `OPEN_WEATHER_API_KEY` for weather. Enter secrets in Render's environment settings, never in the Blueprint or browser code.
-7. Create and deploy the new staging service. Check its `/health`, `/`, `/chat.html`, and `/docs` routes, then test the chat. This same-origin service needs no extra CORS origin.
 
 ## Current limitations
 
