@@ -71,7 +71,7 @@
           <div class="control-row">
             <label>Category
               <select id="fCategory" class="input">
-                <option value="all">All</option>
+                <option value="all">All categories (3 searches)</option>
                 <option value="BEACH">Beach</option>
                 <option value="PARK_RECREATION_AREA">Park or walk</option>
                 <option value="TOURIST_ATTRACTION">Attraction</option>
@@ -96,6 +96,11 @@
           <p class="chat-location-note">
             <span id="serverStatus" class="server-status" aria-live="polite">Location sharing off · Auckland Central</span>
             <a href="explore.html">Choose or adjust a location</a>
+          </p>
+          <p class="preference-note">
+            <label><input id="rememberPreferences" type="checkbox" checked>
+              Remember category, radius and travel choice on this device</label>
+            <span id="preferenceStatus" role="status">Prompts and location are not saved.</span>
           </p>
           <div class="chat-input-row">
             <label class="visually-hidden" for="fInput">Your Auckland request</label>
