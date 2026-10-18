@@ -24,6 +24,7 @@ from app.weather import get_auckland_weather
 
 logger = logging.getLogger("auckland_explorer.ai")
 MAX_RECOMMENDATIONS = 5
+MAX_CANDIDATES_PER_CATEGORY = 5
 MODEL_TIMEOUT_MS = 20_000
 
 
@@ -88,7 +89,9 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
     except Exception as error:
         raise ProviderError(_provider_error_category(error)) from error
     finally:
-        client.close()
+        close = getattr(client, "close", None)
+        if callable(close):
+            close()
 
 
 def _generate_nvidia_text(prompt: str) -> str:
@@ -333,7 +336,7 @@ async def generate_location_recommendations(
                 lon=lon,
                 radius_meters=5000,
             )
-            for category in user_preferences.categories
+            for category in dict.fromkeys(user_preferences.categories)
         )
     )
 
@@ -361,6 +364,19 @@ async def generate_location_recommendations(
     )
     if not places:
         raise RecommendationError("LIVE_PLACE_SEARCH_UNAVAILABLE")
+
+    places = sorted(
+        (
+            place
+            for category in dict.fromkeys(user_preferences.categories)
+            for place in [
+                candidate
+                for candidate in places
+                if candidate["category"] == category
+            ][:MAX_CANDIDATES_PER_CATEGORY]
+        ),
+        key=lambda place: place["distance_meters"],
+    )
 
     prompt = _recommendation_prompt(
         user_prompt,
