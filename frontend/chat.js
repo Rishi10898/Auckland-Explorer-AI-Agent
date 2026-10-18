@@ -228,7 +228,7 @@ async function sendMessage(event) {
     updateProgress();
     const progressTimer = window.setInterval(updateProgress, 250);
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 45000);
+    const timeout = window.setTimeout(() => controller.abort(), 120000);
 
     try {
         if (!API_URL) throw new Error("The recommendation API is not configured.");

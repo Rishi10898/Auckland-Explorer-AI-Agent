@@ -11,6 +11,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import AnyHttpUrl, TypeAdapter
 
 from app.ai import RecommendationError, generate_location_recommendations
 from app.beaches import fetch_realtime_environmental_alerts
@@ -22,6 +23,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("auckland_explorer.core")
+HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
 app = FastAPI(
     title="Tāmaki Makaurau Auckland Explorer Core Engine API",
@@ -55,6 +57,10 @@ def _public_error_message(code: str) -> str:
         )
     if code == "AI_PROVIDER_RESOURCE_GONE":
         return "A configured AI provider resource is no longer available."
+    if code == "AI_PROVIDER_AUTHENTICATION_FAILED":
+        return "The configured AI provider credentials could not be verified."
+    if code == "AI_PROVIDER_PERMISSION_DENIED":
+        return "The configured AI provider does not have permission for this request."
     if code == "LIVE_PLACE_SEARCH_UNAVAILABLE":
         return "Nearby places could not be verified. Please try again later."
     if code == "AI_INVALID_RESPONSE":
@@ -92,7 +98,9 @@ async def generate_regional_destination_matches(
             transport=processed_destinations["transport"],
             environmental_safety_notice=environmental_alert["notice"],
             environmental_safety_status=environmental_alert["status"],
-            environmental_safety_source=environmental_alert["source"],
+            environmental_safety_source=HTTP_URL_ADAPTER.validate_python(
+                environmental_alert["source"]
+            ),
             ai_provider=processed_destinations["provider"],
         )
         logger.info(

@@ -51,9 +51,9 @@ class RecommendationTests(unittest.TestCase):
                 self.assertEqual(ai._provider_http_status(error), status)
                 self.assertEqual(ai._provider_error_category(error), category)
 
-    def test_provider_order_uses_each_gemini_project_once(self):
+    def test_not_found_gemini_falls_back_to_nvidia_without_retrying(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one", "key-two", "key-three"),
+            gemini_api_key="key-one",
             nvidia_api_key="nvidia-key",
         )
         with (
@@ -61,26 +61,27 @@ class RecommendationTests(unittest.TestCase):
             patch.object(
                 ai,
                 "_generate_gemini_text",
-                side_effect=[
-                    ai.ProviderError("unavailable"),
-                    ai.ProviderError("authentication"),
-                    '{"summary":"ok","recommendations":[]}',
-                ],
+                side_effect=ai.ProviderError(
+                    "not_found",
+                    exception_type="ClientError",
+                    http_status=404,
+                ),
             ) as gemini,
-            patch.object(ai, "_generate_nvidia_text") as nvidia,
+            patch.object(
+                ai,
+                "_generate_nvidia_text",
+                return_value='{"summary":"ok","recommendations":[]}',
+            ) as nvidia,
         ):
             result = ai._generate_text("prompt")
 
-        self.assertEqual(result[1], "gemini")
-        self.assertEqual(
-            [call.args[0] for call in gemini.call_args_list],
-            ["key-one", "key-two", "key-three"],
-        )
-        nvidia.assert_not_called()
+        self.assertEqual(result[1], "nvidia")
+        gemini.assert_called_once_with("key-one", "prompt")
+        nvidia.assert_called_once_with("prompt")
 
-    def test_quota_does_not_rotate_or_fall_through(self):
+    def test_gemini_quota_falls_back_to_nvidia_without_retrying(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one", "key-two", "key-three"),
+            gemini_api_key="key-one",
             nvidia_api_key="nvidia-key",
         )
         with (
@@ -90,18 +91,21 @@ class RecommendationTests(unittest.TestCase):
                 "_generate_gemini_text",
                 side_effect=ai.ProviderError("quota"),
             ) as gemini,
-            patch.object(ai, "_generate_nvidia_text") as nvidia,
+            patch.object(
+                ai,
+                "_generate_nvidia_text",
+                return_value='{"summary":"ok","recommendations":[]}',
+            ) as nvidia,
         ):
-            with self.assertRaises(ai.RecommendationError) as error:
-                ai._generate_text("prompt")
+            result = ai._generate_text("prompt")
 
-        self.assertEqual(error.exception.code, "AI_QUOTA_EXCEEDED")
+        self.assertEqual(result[1], "nvidia")
         gemini.assert_called_once_with("key-one", "prompt")
-        nvidia.assert_not_called()
+        nvidia.assert_called_once_with("prompt")
 
-    def test_unavailable_gemini_projects_fall_back_to_nvidia(self):
+    def test_unavailable_gemini_retries_once_then_falls_back_to_nvidia(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one", "key-two", "key-three"),
+            gemini_api_key="key-one",
             nvidia_api_key="nvidia-key",
         )
         with (
@@ -116,16 +120,17 @@ class RecommendationTests(unittest.TestCase):
                 "_generate_nvidia_text",
                 return_value='{"summary":"ok","recommendations":[]}',
             ) as nvidia,
+            patch.object(ai.time, "sleep"),
         ):
             result = ai._generate_text("prompt")
 
         self.assertEqual(result[1], "nvidia")
-        self.assertEqual(gemini.call_count, 3)
+        self.assertEqual(gemini.call_count, 2)
         nvidia.assert_called_once_with("prompt")
 
     def test_malformed_gemini_response_falls_back_to_nvidia(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one", "key-two", "key-three"),
+            gemini_api_key="key-one",
             nvidia_api_key="nvidia-key",
         )
         with (
@@ -148,7 +153,7 @@ class RecommendationTests(unittest.TestCase):
 
     def test_provider_failure_logs_status_and_falls_back_without_details(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one",),
+            gemini_api_key="key-one",
             nvidia_api_key="nvidia-key",
         )
         failure = ai.ProviderError(
@@ -178,9 +183,9 @@ class RecommendationTests(unittest.TestCase):
         self.assertNotIn("sensitive response body", joined_logs)
         self.assertNotIn("key-one", joined_logs)
 
-    def test_gone_gemini_resource_skips_rotation_and_falls_back(self):
+    def test_gone_gemini_resource_falls_back_without_retrying(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one", "key-two", "key-three"),
+            gemini_api_key="key-one",
             nvidia_api_key="nvidia-key",
         )
         with (
@@ -206,36 +211,9 @@ class RecommendationTests(unittest.TestCase):
         gemini.assert_called_once_with("key-one", "prompt")
         nvidia.assert_called_once_with("prompt")
 
-    def test_not_found_gemini_slot_can_fall_through_to_next_project(self):
-        settings = SimpleNamespace(
-            gemini_api_keys=("key-one", "key-two", "key-three"),
-            nvidia_api_key="nvidia-key",
-        )
-        with (
-            patch.object(ai, "settings", settings),
-            patch.object(
-                ai,
-                "_generate_gemini_text",
-                side_effect=[
-                    ai.ProviderError(
-                        "not_found",
-                        exception_type="ClientError",
-                        http_status=404,
-                    ),
-                    '{"summary":"ok","recommendations":[]}',
-                ],
-            ) as gemini,
-            patch.object(ai, "_generate_nvidia_text") as nvidia,
-        ):
-            result = ai._generate_text("prompt")
-
-        self.assertEqual(result[1], "gemini")
-        self.assertEqual(gemini.call_count, 2)
-        nvidia.assert_not_called()
-
     def test_missing_model_without_fallback_has_a_specific_error(self):
         settings = SimpleNamespace(
-            gemini_api_keys=("key-one",),
+            gemini_api_key="key-one",
             nvidia_api_key="",
         )
         with (
@@ -252,7 +230,7 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "AI_RESOURCE_NOT_FOUND")
 
     def test_nvidia_gone_response_is_logged_and_reported_safely(self):
-        settings = SimpleNamespace(gemini_api_keys=(), nvidia_api_key="nvidia-key")
+        settings = SimpleNamespace(gemini_api_key="", nvidia_api_key="nvidia-key")
         with (
             patch.object(ai, "settings", settings),
             patch.object(
@@ -297,13 +275,15 @@ class RecommendationTests(unittest.TestCase):
 
     def test_gemini_client_without_close_method_returns_response(self):
         client = SimpleNamespace(
-            models=SimpleNamespace(
-                generate_content=Mock(
-                    return_value=SimpleNamespace(text='{"summary":"ok"}')
+            interactions=SimpleNamespace(
+                create=Mock(
+                    return_value=SimpleNamespace(
+                        output_text='{"summary":"ok"}'
+                    )
                 )
             )
         )
-        settings = SimpleNamespace(gemini_model="gemini-2.5-flash")
+        settings = SimpleNamespace(gemini_model="gemini-3.8-flash")
 
         with (
             patch.object(ai, "settings", settings),
@@ -318,19 +298,30 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(text, '{"summary":"ok"}')
         self.assertEqual(
             create_client.call_args.kwargs["http_options"].api_version,
-            "v1",
+            "v1beta",
+        )
+        options = create_client.call_args.kwargs["http_options"]
+        self.assertEqual(options.retry_options.attempts, 1)
+        client.interactions.create.assert_called_once()
+        self.assertEqual(
+            client.interactions.create.call_args.kwargs["response_format"][
+                "mime_type"
+            ],
+            "application/json",
         )
 
     def test_gemini_cleanup_error_does_not_mask_success(self):
         client = SimpleNamespace(
-            models=SimpleNamespace(
-                generate_content=Mock(
-                    return_value=SimpleNamespace(text='{"summary":"ok"}')
+            interactions=SimpleNamespace(
+                create=Mock(
+                    return_value=SimpleNamespace(
+                        output_text='{"summary":"ok"}'
+                    )
                 )
             ),
             close=Mock(side_effect=RuntimeError("sensitive cleanup detail")),
         )
-        settings = SimpleNamespace(gemini_model="gemini-2.5-flash")
+        settings = SimpleNamespace(gemini_model="gemini-3.8-flash")
 
         with (
             patch.object(ai, "settings", settings),
@@ -347,12 +338,12 @@ class RecommendationTests(unittest.TestCase):
     def test_gemini_cleanup_error_does_not_mask_provider_failure(self):
         provider_error = ProviderHTTPError(403)
         client = SimpleNamespace(
-            models=SimpleNamespace(
-                generate_content=Mock(side_effect=provider_error)
+            interactions=SimpleNamespace(
+                create=Mock(side_effect=provider_error)
             ),
             close=Mock(side_effect=RuntimeError("sensitive cleanup detail")),
         )
-        settings = SimpleNamespace(gemini_model="gemini-2.5-flash")
+        settings = SimpleNamespace(gemini_model="gemini-3.8-flash")
 
         with (
             patch.object(ai, "settings", settings),
@@ -528,7 +519,8 @@ class RecommendationTests(unittest.TestCase):
                 "gemini",
             )
 
-        def search_places(target_category, **_kwargs):
+        def search_places(target_category, **kwargs):
+            self.assertEqual(kwargs["radius_meters"], 5000)
             return {
                 "status": "success",
                 "places": candidates_by_category[target_category],

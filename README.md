@@ -1,9 +1,9 @@
 # Auckland Explorer
 
 **Purpose:** help people discover Auckland destinations using their request, optional location, current weather, and verified nearby place-search results.
-**Workflow:** browser chat → consented coordinates and guided preferences → FastAPI checks TomTom, OpenWeather, and Safeswim → Gemini selects from verified candidates (NVIDIA fallback) → validated cards and Leaflet map.
+**Workflow:** browser chat → consented coordinates and guided preferences → FastAPI queries TomTom, OpenWeather, and Safeswim → Gemini selects from verified candidates (NVIDIA fallback) → validated cards and Leaflet map.
 
-The existing static site remains on GitHub Pages. The existing Render API service is preserved; a separate Render staging service can serve both the API and frontend.
+The existing static site remains on GitHub Pages. The existing Render API service is preserved; a separate Render staging service can serve both the API and frontend. The optional Vercel rewrite proxies `/api/*` to the same Render API.
 
 ## What the chat does
 
@@ -23,18 +23,19 @@ The existing static site remains on GitHub Pages. The existing Render API servic
 
 Set credentials as environment variables or in the ignored `backend/.env` file for local work. Never put values in frontend files or commit them.
 
-For recommendations, configure at least one Gemini key and the TomTom key. Add OpenWeather for live weather context; the other Gemini project keys are optional fallback slots.
+For recommendations, configure `GEMINI_API_KEY_1` and the TomTom key. `NVIDIA_API_KEY` is the fallback if Gemini is unavailable. Add OpenWeather for live weather context.
 
 ```text
 GEMINI_API_KEY_1
+NVIDIA_API_KEY
 TOMTOM_API_KEY
 ```
 
-`GEMINI_API_KEY_2`, `GEMINI_API_KEY_3`, `OPEN_WEATHER_API_KEY`, and `NVIDIA_API_KEY` are optional. NVIDIA enables the OpenAI-compatible fallback. Its model defaults to the existing integration's `deepseek-ai/deepseek-v4-flash-0731`; set `NVIDIA_MODEL` only after checking availability in your NVIDIA account. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. `AT_API_KEY` and `AT_REALTIME_URL` are optional; without them the app still provides the public AT Journey Planner link.
+`OPEN_WEATHER_API_KEY`, `AT_API_KEY`, and `AT_REALTIME_URL` are optional. Without AT realtime credentials, the app provides the public AT Journey Planner link but does not claim live route or fare data. `GEMINI_MODEL` defaults to `gemini-3.8-flash`; `NVIDIA_MODEL` defaults to `deepseek-ai/deepseek-v4.1-flash`. These defaults are currently listed in their providers' catalogs.
 
-Gemini requests use the stable `v1` API and the three configured project keys in order. A Gemini quota/429 response stops the sequence instead of rotating keys to evade a limit. Invalid requests and explicit 410 Gone responses skip remaining Gemini projects; other failures may fall through to another project and then NVIDIA. Separate projects do not guarantee independent account, billing, or model limits. Monitor each project's active limits and billing independently.
+Gemini uses the documented Interactions API with `gemini-3.8-flash`, JSON-schema output, and the single primary key. The SDK requirement is `google-genai>=2.31.0,<3.0.0`. Gemini and NVIDIA each receive a bounded timeout and at most one retry for transient timeouts or service/network failures. Permanent failures are not retried; the app falls back to NVIDIA without rotating Gemini keys. See the [Gemini model list](https://ai.google.dev/gemini-api/docs/models), [Interactions API guide](https://ai.google.dev/gemini-api/docs/interactions-overview), [structured output guide](https://ai.google.dev/gemini-api/docs/structured-output), and [NVIDIA NIM model/API guide](https://docs.api.nvidia.com/nim/docs/models).
 
-The production Render service is API-only and the deployed GitHub Pages frontend calls it. Add `GEMINI_API_KEY_1` to that existing service's environment settings to use Gemini; `_2` and `_3` are optional fallback slots. `render.yaml` lists these variable names, but existing Render services must have newly added `sync: false` secrets entered manually in the dashboard. Do not paste keys into source files.
+The production Render service is API-only and the deployed GitHub Pages frontend calls it. In the existing service's environment settings, retain or add `GEMINI_API_KEY_1` and `NVIDIA_API_KEY`; remove obsolete `GEMINI_API_KEY_2` and `GEMINI_API_KEY_3` entries if present. Remove or update any stale `GEMINI_MODEL` or `NVIDIA_MODEL` overrides to the defaults above. Existing Render services must have new `sync: false` secrets entered manually in the dashboard. Do not paste keys into source files.
 
 For a staging deployment, set `FRONTEND_DIR=frontend`. Set `CORS_ORIGINS` to a comma-separated list of trusted frontend origins only when cross-origin requests are needed; same-origin Render staging does not require browser CORS.
 
@@ -61,13 +62,14 @@ python -m compileall -q app tests
 Set-Location ..
 node --check frontend/chat.js
 node --check frontend/config.js
+node --check frontend/theme.js
 ```
 
 Backend tests mock external services and AI providers; they do not make live, billable calls. For manual visual verification, start the local server above, then check:
 
 1. The chat layout, theme picker, keyboard focus, and responsive controls.
 2. First-visit location prompt: no geolocation request until “Share my location” is pressed; the default option works without consent.
-3. A mocked or credentialed recommendation: cards, details, AT link, Safeswim status, markers, and all three radius circles.
+3. A mocked or credentialed recommendation: cards, details, AT link, Safeswim status, markers, and all three radius circles. Mock-based automated tests prove application behavior but do not prove provider availability.
 4. Radius changes update visible cards and destination markers and clearly label straight-line distances.
 5. Denied location, API failure, empty results, and map-load failure remain understandable and safe.
 6. `/health`, `/`, `/chat.html`, and `/docs` load through the FastAPI server.
@@ -85,12 +87,12 @@ Because the Blueprint contains both services, use the dashboard steps below to c
 3. Set **Build Command** to `pip install -r backend/app/requirements.txt`.
 4. Set **Start Command** to `uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT`.
 5. Set **Health Check Path** to `/health` and add `FRONTEND_DIR=frontend`.
-6. Add `GEMINI_API_KEY_1` and `TOMTOM_API_KEY`; add `OPEN_WEATHER_API_KEY` for weather, more Gemini keys for eligible transient failures, and `NVIDIA_API_KEY` only if you want that fallback. Enter secrets in Render's environment settings, never in the Blueprint or browser code.
+6. Add `GEMINI_API_KEY_1`, `NVIDIA_API_KEY`, and `TOMTOM_API_KEY`; add `OPEN_WEATHER_API_KEY` for weather. Enter secrets in Render's environment settings, never in the Blueprint or browser code.
 7. Create and deploy the new staging service. Check its `/health`, `/`, `/chat.html`, and `/docs` routes, then test the chat. This same-origin service needs no extra CORS origin.
 
 ## Current limitations
 
 - The result map uses the public OpenStreetMap tile service with attribution. It is intended for modest use, not as a guaranteed unlimited production tile service; review its current usage policy and move to a suitable provider if traffic grows.
-- Safeswim response freshness depends on its upstream payload. If the application cannot confirm a description, it reports status as unverified and links to Safeswim.
+- The Safeswim endpoint returns site quality codes but no timestamp in the checked response. The app selects the nearest returned site, reports RED as a warning, and keeps GREEN/unknown data explicitly unverified; it never treats a GREEN response as a guarantee or verifies the user's destination.
 - AI-created relevance rationales are suggestions, not official destination facts. Check linked destination/transport information before travelling.
 - No account database, analytics, or persistent backend cache is introduced. The browser's opted-in location remains stored locally until the user chooses “Stop sharing and forget” or clears browser storage.

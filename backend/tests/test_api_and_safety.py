@@ -3,12 +3,12 @@
 Workflow: issue local TestClient requests with mocked services -> assert the
 documented API contract, safe errors, and warning/unknown behavior.
 """
-import asyncio
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from fastapi.testclient import TestClient
+from pydantic import AnyHttpUrl, TypeAdapter
 
 from app import main
 from app.beaches import (
@@ -20,35 +20,79 @@ from app.beaches import (
 from app.ai import RecommendationError
 from app.schemas import DestinationMatchItem, GeolocationCoordinates
 
+HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
+
 
 class SafetyTests(unittest.IsolatedAsyncioTestCase):
+    coordinates = GeolocationCoordinates(
+        latitude=-36.8485,
+        longitude=174.7633,
+    )
+
     def test_missing_safeswim_description_is_unverified(self):
-        result = _notice_from_data({"unexpected": "payload"})
+        result = _notice_from_data({"unexpected": "payload"}, self.coordinates)
         self.assertEqual(result["status"], "unverified")
         self.assertEqual(result["notice"], UNVERIFIED_NOTICE)
         self.assertEqual(result["source"], SAFESWIM_SOURCE)
 
     def test_unsafe_safeswim_description_is_warning(self):
         result = _notice_from_data(
-            {"alert": {"description": "Unsafe swimming: water quality warning."}}
+            {"alert": {"description": "Unsafe swimming: water quality warning."}},
+            self.coordinates,
         )
         self.assertEqual(result["status"], "warning")
         self.assertIn("Unsafe swimming", result["notice"])
+
+    def test_live_green_site_remains_unverified_without_timestamp(self):
+        result = _notice_from_data(
+            {
+                "locations": [
+                    {
+                        "name": "Nearby site",
+                        "position": [-36.8414, 174.7593],
+                        "state": {"quality": "GREEN"},
+                    },
+                    {
+                        "name": "Far site",
+                        "position": [-38.0, 177.0],
+                        "state": {"quality": "RED"},
+                    },
+                ]
+            },
+            self.coordinates,
+        )
+
+        self.assertEqual(result["status"], "unverified")
+        self.assertIn("Nearby site", result["notice"])
+        self.assertIn("does not include a timestamp", result["notice"])
+
+    def test_live_red_site_is_reported_as_a_warning(self):
+        result = _notice_from_data(
+            {
+                "locations": [
+                    {
+                        "name": "Nearby site",
+                        "position": [-36.8414, 174.7593],
+                        "state": {"quality": "RED"},
+                    }
+                ]
+            },
+            self.coordinates,
+        )
+
+        self.assertEqual(result["status"], "warning")
+        self.assertIn("RED", result["notice"])
 
     async def test_service_failure_is_unverified_and_does_not_log_coordinates(self):
         client = AsyncMock()
         client.__aenter__.return_value = client
         client.get.side_effect = httpx.ConnectError("upstream unavailable")
-        coordinates = GeolocationCoordinates(
-            latitude=-36.8485,
-            longitude=174.7633,
-        )
 
         with (
             patch("app.beaches.httpx.AsyncClient", return_value=client),
             self.assertLogs("auckland_explorer.services", level="WARNING") as logs,
         ):
-            result = await fetch_realtime_environmental_alerts(coordinates)
+            result = await fetch_realtime_environmental_alerts(self.coordinates)
 
         self.assertEqual(result["status"], "unverified")
         self.assertNotIn("-36.8485", "\n".join(logs.output))
@@ -84,7 +128,9 @@ class ApiTests(unittest.TestCase):
             place_name="Auckland Domain",
             category="PARK_RECREATION_AREA",
             relevance_rationale="A central park.",
-            directions_url="https://www.google.com/maps/dir/?api=1",
+            directions_url=HTTP_URL_ADAPTER.validate_python(
+                "https://www.google.com/maps/dir/?api=1"
+            ),
             distance_meters=250,
             latitude=-36.8606,
             longitude=174.7785,

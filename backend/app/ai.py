@@ -9,12 +9,16 @@ import json
 import logging
 import math
 import re
+import time
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlencode
 
+import httpx
 from google import genai
 from google.genai import types
 from openai import OpenAI
+from pydantic import AnyHttpUrl, TypeAdapter
 
 from app.config import settings
 from app.places import get_auckland_places
@@ -26,6 +30,27 @@ logger = logging.getLogger("auckland_explorer.ai")
 MAX_RECOMMENDATIONS = 5
 MAX_CANDIDATES_PER_CATEGORY = 5
 MODEL_TIMEOUT_MS = 20_000
+MAX_PROVIDER_ATTEMPTS = 2
+PROVIDER_RETRY_DELAY_SECONDS = 0.25
+HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
+MODEL_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "recommendations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "candidate_id": {"type": "string"},
+                    "relevance_rationale": {"type": "string"},
+                },
+                "required": ["candidate_id", "relevance_rationale"],
+            },
+        },
+    },
+    "required": ["summary", "recommendations"],
+}
 
 
 class ProviderError(Exception):
@@ -85,11 +110,16 @@ def _provider_error_category(error: Exception) -> str:
         return "not_found"
     if status == 410:
         return "gone"
-    if status == 408 or isinstance(error, TimeoutError):
+    if status == 408 or isinstance(
+        error,
+        (TimeoutError, httpx.TimeoutException),
+    ):
         return "timeout"
     if (status is not None and status >= 500) or isinstance(
         error, ConnectionError
     ):
+        return "unavailable"
+    if isinstance(error, httpx.TransportError):
         return "unavailable"
     return "unknown"
 
@@ -115,26 +145,32 @@ def _log_cleanup_failure(provider: str, error: Exception) -> None:
 
 
 def _generate_gemini_text(api_key: str, prompt: str) -> str:
-    """Call Gemini once with a bounded deadline and JSON response mode."""
-    client = genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(
-            api_version="v1",
-            timeout=MODEL_TIMEOUT_MS,
-        ),
-    )
+    """Call Gemini's Interactions API with a bounded deadline and JSON mode."""
+    client = None
     try:
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=1400,
-                response_mime_type="application/json",
+        client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                api_version="v1beta",
+                timeout=MODEL_TIMEOUT_MS,
+                retry_options=types.HttpRetryOptions(attempts=1),
             ),
         )
-        text = response.text
-        if not text:
+        response = client.interactions.create(
+            model=settings.gemini_model,
+            input=prompt,
+            generation_config={
+                "temperature": 0.2,
+                "max_output_tokens": 1400,
+            },
+            response_format={
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": MODEL_RESPONSE_SCHEMA,
+            },
+        )
+        text = getattr(response, "output_text", None)
+        if not isinstance(text, str) or not text.strip():
             raise ProviderError("malformed_response", exception_type="EmptyResponse")
         return text
     except ProviderError:
@@ -146,7 +182,7 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
             http_status=_provider_http_status(error),
         ) from error
     finally:
-        close = getattr(client, "close", None)
+        close = getattr(client, "close", None) if client is not None else None
         if callable(close):
             try:
                 close()
@@ -154,18 +190,47 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
                 _log_cleanup_failure("Gemini", error)
 
 
+def _generate_with_retries(
+    provider: str,
+    generate: Callable[[], str],
+) -> str:
+    """Retry only transient provider failures, at most once."""
+    for attempt in range(1, MAX_PROVIDER_ATTEMPTS + 1):
+        try:
+            return generate()
+        except ProviderError as error:
+            if (
+                attempt == MAX_PROVIDER_ATTEMPTS
+                or error.category not in {"timeout", "unavailable"}
+            ):
+                raise
+            logger.warning(
+                "%s provider transient failure; retrying "
+                "(category=%s, attempt=%s/%s, exception=%s, http_status=%s).",
+                provider,
+                error.category,
+                attempt,
+                MAX_PROVIDER_ATTEMPTS,
+                error.exception_type or "ProviderError",
+                error.http_status,
+            )
+            time.sleep(PROVIDER_RETRY_DELAY_SECONDS)
+    raise AssertionError("Provider retry loop completed without a result.")
+
+
 def _generate_nvidia_text(prompt: str) -> str:
     """Call the existing OpenAI-compatible NVIDIA endpoint once."""
     if not settings.nvidia_api_key:
         raise ProviderError("not_configured")
 
-    client = OpenAI(
-        base_url=settings.nvidia_base_url,
-        api_key=settings.nvidia_api_key,
-        timeout=MODEL_TIMEOUT_MS / 1000,
-        max_retries=0,
-    )
+    client = None
     try:
+        client = OpenAI(
+            base_url=settings.nvidia_base_url,
+            api_key=settings.nvidia_api_key,
+            timeout=MODEL_TIMEOUT_MS / 1000,
+            max_retries=0,
+        )
         response = client.chat.completions.create(
             model=settings.nvidia_model,
             messages=[{"role": "user", "content": prompt}],
@@ -185,49 +250,52 @@ def _generate_nvidia_text(prompt: str) -> str:
             http_status=_provider_http_status(error),
         ) from error
     finally:
-        try:
-            client.close()
-        except Exception as error:
-            _log_cleanup_failure("NVIDIA", error)
+        if client is not None:
+            try:
+                client.close()
+            except Exception as error:
+                _log_cleanup_failure("NVIDIA", error)
 
 
 def _generate_text(prompt: str) -> tuple[str, str]:
-    """Try Gemini projects in order, then NVIDIA without quota rotation."""
-    configured_gemini = [
-        (index, key)
-        for index, key in enumerate(settings.gemini_api_keys, start=1)
-        if key
-    ]
-    last_category = "not_configured"
-    for index, key in configured_gemini:
+    """Try the primary Gemini key, then NVIDIA, without rotating credentials."""
+    last_error: ProviderError | None = None
+    if settings.gemini_api_key:
         try:
-            return _generate_gemini_text(key, prompt), "gemini"
+            return _generate_with_retries(
+                "Gemini",
+                lambda: _generate_gemini_text(
+                    settings.gemini_api_key,
+                    prompt,
+                ),
+            ), "gemini"
         except ProviderError as error:
-            last_category = error.category
-            logger.warning("Gemini project slot %s failed.", index)
+            last_error = error
             _log_provider_failure("Gemini", error)
-            if error.category == "quota":
-                raise RecommendationError("AI_QUOTA_EXCEEDED") from error
-            if error.category in {"invalid_request", "not_found", "gone"}:
-                break
 
     if settings.nvidia_api_key:
         try:
-            return _generate_nvidia_text(prompt), "nvidia"
+            return _generate_with_retries(
+                "NVIDIA",
+                lambda: _generate_nvidia_text(prompt),
+            ), "nvidia"
         except ProviderError as error:
-            last_category = error.category
-            logger.warning("NVIDIA fallback failed.")
+            last_error = error
             _log_provider_failure("NVIDIA", error)
 
-    if last_category == "quota":
-        raise RecommendationError("AI_QUOTA_EXCEEDED")
-    if last_category == "not_configured":
+    if last_error is None:
         raise RecommendationError("AI_PROVIDERS_NOT_CONFIGURED")
-    if last_category == "not_found":
+    if last_error.category == "quota":
+        raise RecommendationError("AI_QUOTA_EXCEEDED") from last_error
+    if last_error.category == "not_found":
         raise RecommendationError("AI_RESOURCE_NOT_FOUND")
-    if last_category == "gone":
+    if last_error.category == "gone":
         raise RecommendationError("AI_PROVIDER_RESOURCE_GONE")
-    raise RecommendationError("AI_PROVIDERS_UNAVAILABLE")
+    if last_error.category == "authentication":
+        raise RecommendationError("AI_PROVIDER_AUTHENTICATION_FAILED")
+    if last_error.category == "permission":
+        raise RecommendationError("AI_PROVIDER_PERMISSION_DENIED")
+    raise RecommendationError("AI_PROVIDERS_UNAVAILABLE") from last_error
 
 
 def _recommendation_prompt(
@@ -356,7 +424,7 @@ def _parse_model_response(
                 place_name=candidate["name"],
                 category=candidate["category"],
                 relevance_rationale=rationale.strip(),
-                directions_url=directions_url,
+                directions_url=HTTP_URL_ADAPTER.validate_python(directions_url),
                 distance_meters=candidate["distance_meters"],
                 latitude=candidate["latitude"],
                 longitude=candidate["longitude"],
