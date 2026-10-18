@@ -33,18 +33,6 @@ Run these commands from the `backend` directory. Open `http://127.0.0.1:8000/cha
 
 ## Tests and local visual checks
 
-From the repository root:
-
-```powershell
-Set-Location backend
-python -m unittest discover -s tests -v
-python -m compileall -q app tests
-Set-Location ..
-node --check frontend/chat.js
-node --check frontend/config.js
-node --check frontend/theme.js
-```
-
 Backend tests mock external services and AI providers; they do not make live, billable calls. For manual visual verification, start the local server above, then check:
 
 1. The chat layout, theme picker, keyboard focus, and responsive controls.
