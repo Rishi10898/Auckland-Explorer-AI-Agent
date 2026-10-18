@@ -1242,6 +1242,7 @@ textarea {
     .chat-header .chat-intro { max-width: 340px; font-size: .78rem; }
     .location-controls { gap: 6px; }
     .location-controls #statusText { max-width: 105px; font-size: .7rem; }
+    .quick-actions { flex-wrap: wrap; overflow-x: visible; }
     .chat-thread .message { max-width: 94%; }
     .control-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
     .control-row select { padding: 7px 5px; font-size: .78rem; }
