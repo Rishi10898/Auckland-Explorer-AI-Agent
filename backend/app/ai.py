@@ -31,9 +31,17 @@ MODEL_TIMEOUT_MS = 20_000
 class ProviderError(Exception):
     """A safe provider failure category; exception text never includes secrets."""
 
-    def __init__(self, category: str):
+    def __init__(
+        self,
+        category: str,
+        *,
+        exception_type: str | None = None,
+        http_status: int | None = None,
+    ):
         super().__init__(category)
         self.category = category
+        self.exception_type = exception_type
+        self.http_status = http_status
 
 
 class RecommendationError(RuntimeError):
@@ -44,31 +52,76 @@ class RecommendationError(RuntimeError):
         self.code = code
 
 
+def _provider_http_status(error: Exception) -> int | None:
+    """Return only a valid numeric HTTP status exposed by an SDK exception."""
+    response = getattr(error, "response", None)
+    for value in (
+        getattr(error, "status_code", None),
+        getattr(error, "code", None),
+        getattr(response, "status_code", None),
+    ):
+        if isinstance(value, int) and not isinstance(value, bool):
+            if 100 <= value <= 599:
+                return value
+    return None
+
+
 def _provider_error_category(error: Exception) -> str:
     """Map SDK/network errors to bounded failover categories."""
-    status = getattr(error, "status_code", None) or getattr(error, "code", None)
-    response = getattr(error, "response", None)
-    status = status or getattr(response, "status_code", None)
-    message = str(error).lower()
+    status = _provider_http_status(error)
+    reason = getattr(error, "status", None)
+    if isinstance(reason, str):
+        reason = reason.upper()
 
-    if status == 429 or "resource_exhausted" in message or "quota" in message:
+    if status == 429 or reason == "RESOURCE_EXHAUSTED":
         return "quota"
-    if status in (401, "UNAUTHENTICATED"):
+    if status == 401 or reason == "UNAUTHENTICATED":
         return "authentication"
-    if status in (403, "PERMISSION_DENIED"):
+    if status == 403 or reason == "PERMISSION_DENIED":
         return "permission"
-    if (
-        isinstance(status, int) and status >= 500
-    ) or isinstance(error, (TimeoutError, ConnectionError)):
+    if status == 400 or reason == "INVALID_ARGUMENT":
+        return "invalid_request"
+    if status == 404 or reason == "NOT_FOUND":
+        return "not_found"
+    if status == 410:
+        return "gone"
+    if status == 408 or isinstance(error, TimeoutError):
+        return "timeout"
+    if (status is not None and status >= 500) or isinstance(
+        error, ConnectionError
+    ):
         return "unavailable"
-    return "unavailable"
+    return "unknown"
+
+
+def _log_provider_failure(provider: str, error: ProviderError) -> None:
+    logger.warning(
+        "%s provider failed (category=%s, exception=%s, http_status=%s).",
+        provider,
+        error.category,
+        error.exception_type or "ProviderError",
+        error.http_status,
+    )
+
+
+def _log_cleanup_failure(provider: str, error: Exception) -> None:
+    logger.warning(
+        "%s client cleanup failed (category=%s, exception=%s, http_status=%s).",
+        provider,
+        _provider_error_category(error),
+        type(error).__name__,
+        _provider_http_status(error),
+    )
 
 
 def _generate_gemini_text(api_key: str, prompt: str) -> str:
     """Call Gemini once with a bounded deadline and JSON response mode."""
     client = genai.Client(
         api_key=api_key,
-        http_options=types.HttpOptions(timeout=MODEL_TIMEOUT_MS),
+        http_options=types.HttpOptions(
+            api_version="v1",
+            timeout=MODEL_TIMEOUT_MS,
+        ),
     )
     try:
         response = client.models.generate_content(
@@ -82,16 +135,23 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
         )
         text = response.text
         if not text:
-            raise ProviderError("malformed_response")
+            raise ProviderError("malformed_response", exception_type="EmptyResponse")
         return text
     except ProviderError:
         raise
     except Exception as error:
-        raise ProviderError(_provider_error_category(error)) from error
+        raise ProviderError(
+            _provider_error_category(error),
+            exception_type=type(error).__name__,
+            http_status=_provider_http_status(error),
+        ) from error
     finally:
         close = getattr(client, "close", None)
         if callable(close):
-            close()
+            try:
+                close()
+            except Exception as error:
+                _log_cleanup_failure("Gemini", error)
 
 
 def _generate_nvidia_text(prompt: str) -> str:
@@ -114,14 +174,21 @@ def _generate_nvidia_text(prompt: str) -> str:
         )
         text = response.choices[0].message.content
         if not text:
-            raise ProviderError("malformed_response")
+            raise ProviderError("malformed_response", exception_type="EmptyResponse")
         return text
     except ProviderError:
         raise
     except Exception as error:
-        raise ProviderError(_provider_error_category(error)) from error
+        raise ProviderError(
+            _provider_error_category(error),
+            exception_type=type(error).__name__,
+            http_status=_provider_http_status(error),
+        ) from error
     finally:
-        client.close()
+        try:
+            client.close()
+        except Exception as error:
+            _log_cleanup_failure("NVIDIA", error)
 
 
 def _generate_text(prompt: str) -> tuple[str, str]:
@@ -137,11 +204,8 @@ def _generate_text(prompt: str) -> tuple[str, str]:
             return _generate_gemini_text(key, prompt), "gemini"
         except ProviderError as error:
             last_category = error.category
-            logger.warning(
-                "Gemini project slot %s failed (%s).",
-                index,
-                error.category,
-            )
+            logger.warning("Gemini project slot %s failed.", index)
+            _log_provider_failure("Gemini", error)
             if error.category == "quota":
                 raise RecommendationError("AI_QUOTA_EXCEEDED") from error
 
@@ -150,7 +214,8 @@ def _generate_text(prompt: str) -> tuple[str, str]:
             return _generate_nvidia_text(prompt), "nvidia"
         except ProviderError as error:
             last_category = error.category
-            logger.warning("NVIDIA fallback failed (%s).", error.category)
+            logger.warning("NVIDIA fallback failed.")
+            _log_provider_failure("NVIDIA", error)
 
     if last_category == "quota":
         raise RecommendationError("AI_QUOTA_EXCEEDED")

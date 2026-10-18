@@ -32,7 +32,7 @@ TOMTOM_API_KEY
 
 `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3`, `OPEN_WEATHER_API_KEY`, and `NVIDIA_API_KEY` are optional. NVIDIA enables the OpenAI-compatible fallback. Its model defaults to the existing integration's `deepseek-ai/deepseek-v4-flash-0731`; set `NVIDIA_MODEL` only after checking availability in your NVIDIA account. `GEMINI_MODEL` defaults to `gemini-2.5-flash`. `AT_API_KEY` and `AT_REALTIME_URL` are optional; without them the app still provides the public AT Journey Planner link.
 
-Gemini requests use the three configured project keys in order. A Gemini quota/429 response stops the Gemini sequence instead of rotating keys to evade a limit. Other temporary failures may fall through to another configured Gemini project and then NVIDIA. Separate projects do not guarantee independent account, billing, or model limits. Monitor each project's active limits and billing independently.
+Gemini requests use the stable `v1` API and the three configured project keys in order. A Gemini quota/429 response stops the Gemini sequence instead of rotating keys to evade a limit. Other temporary failures may fall through to another configured Gemini project and then NVIDIA. Separate projects do not guarantee independent account, billing, or model limits. Monitor each project's active limits and billing independently.
 
 The production Render service is API-only and the deployed GitHub Pages frontend calls it. Add `GEMINI_API_KEY_1` to that existing service's environment settings to use Gemini; `_2` and `_3` are optional fallback slots. `render.yaml` lists these variable names, but existing Render services must have newly added `sync: false` secrets entered manually in the dashboard. Do not paste keys into source files.
 
