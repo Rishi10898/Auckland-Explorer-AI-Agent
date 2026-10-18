@@ -36,7 +36,7 @@ services:
       - key: GEMINI_API_KEY_1
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-3.8-flash
+        value: gemini-2.5-flash
       - key: NVIDIA_API_KEY
         sync: false
       - key: NVIDIA_MODEL

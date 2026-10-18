@@ -1,8 +1,8 @@
+
 """Coordinate trusted context and provider-backed destination selection.
 
-Purpose: keep exact user coordinates in backend services and constrain model
-answers to place-search candidates. Workflow: weather/place lookup -> minimal
-candidate prompt -> Gemini keys in order -> NVIDIA fallback -> schema mapping.
+Workflow: weather/place lookup -> minimal candidate prompt -> Gemini ->
+NVIDIA fallback -> validated destination records.
 """
 import asyncio
 import json
@@ -13,13 +13,11 @@ import time
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlencode
-
 import httpx
 from google import genai
 from google.genai import types
 from openai import OpenAI
 from pydantic import AnyHttpUrl, TypeAdapter
-
 from app.config import settings
 from app.places import get_auckland_places
 from app.schemas import DestinationMatchItem, UserPreferences
@@ -27,12 +25,16 @@ from app.transport import get_transport_info
 from app.weather import get_auckland_weather
 
 logger = logging.getLogger("auckland_explorer.ai")
+
+# Limits keep model requests, retries, and responses bounded.
 MAX_RECOMMENDATIONS = 5
 MAX_CANDIDATES_PER_CATEGORY = 5
 MODEL_TIMEOUT_MS = 20_000
 MAX_PROVIDER_ATTEMPTS = 2
 PROVIDER_RETRY_DELAY_SECONDS = 0.25
 HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
+
+# Require structured JSON from the primary AI provider.
 MODEL_RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -53,8 +55,9 @@ MODEL_RESPONSE_SCHEMA = {
 }
 
 
+# Safe internal errors avoid passing raw provider messages to users or logs.
 class ProviderError(Exception):
-    """A safe provider failure category; exception text never includes secrets."""
+    """A provider failure category without sensitive exception details."""
 
     def __init__(
         self,
@@ -70,15 +73,16 @@ class ProviderError(Exception):
 
 
 class RecommendationError(RuntimeError):
-    """A user-safe, machine-readable failure from the recommendation workflow."""
+    """A user-safe, machine-readable recommendation failure."""
 
     def __init__(self, code: str):
         super().__init__(code)
         self.code = code
 
 
+# Provider error classification and privacy-safe logging.
 def _provider_http_status(error: Exception) -> int | None:
-    """Return only a valid numeric HTTP status exposed by an SDK exception."""
+    """Extract a valid numeric HTTP status from an SDK exception."""
     response = getattr(error, "response", None)
     for value in (
         getattr(error, "status_code", None),
@@ -92,7 +96,7 @@ def _provider_http_status(error: Exception) -> int | None:
 
 
 def _provider_error_category(error: Exception) -> str:
-    """Map SDK/network errors to bounded failover categories."""
+    """Map provider failures to bounded categories for fallback decisions."""
     status = _provider_http_status(error)
     reason = getattr(error, "status", None)
     if isinstance(reason, str):
@@ -111,8 +115,7 @@ def _provider_error_category(error: Exception) -> str:
     if status == 410:
         return "gone"
     if status == 408 or isinstance(
-        error,
-        (TimeoutError, httpx.TimeoutException),
+        error, (TimeoutError, httpx.TimeoutException)
     ):
         return "timeout"
     if (status is not None and status >= 500) or isinstance(
@@ -125,6 +128,7 @@ def _provider_error_category(error: Exception) -> str:
 
 
 def _log_provider_failure(provider: str, error: ProviderError) -> None:
+    """Log diagnostic metadata without raw exception messages or credentials."""
     logger.warning(
         "%s provider failed (category=%s, exception=%s, http_status=%s).",
         provider,
@@ -144,8 +148,9 @@ def _log_cleanup_failure(provider: str, error: Exception) -> None:
     )
 
 
+# Primary provider: Gemini, with bounded timeouts and structured output.
 def _generate_gemini_text(api_key: str, prompt: str) -> str:
-    """Call Gemini's Interactions API with a bounded deadline and JSON mode."""
+    """Call Gemini's Interactions API and return its generated text."""
     client = None
     try:
         client = genai.Client(
@@ -171,7 +176,10 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
         )
         text = getattr(response, "output_text", None)
         if not isinstance(text, str) or not text.strip():
-            raise ProviderError("malformed_response", exception_type="EmptyResponse")
+            raise ProviderError(
+                "malformed_response",
+                exception_type="EmptyResponse",
+            )
         return text
     except ProviderError:
         raise
@@ -187,14 +195,16 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
             try:
                 close()
             except Exception as error:
+                # Cleanup errors must not mask a successful response or failure.
                 _log_cleanup_failure("Gemini", error)
 
 
+# Retry transient failures only; do not repeat permanent errors such as 404.
 def _generate_with_retries(
     provider: str,
     generate: Callable[[], str],
 ) -> str:
-    """Retry only transient provider failures, at most once."""
+    """Retry timeout or availability failures at most once."""
     for attempt in range(1, MAX_PROVIDER_ATTEMPTS + 1):
         try:
             return generate()
@@ -218,8 +228,9 @@ def _generate_with_retries(
     raise AssertionError("Provider retry loop completed without a result.")
 
 
+# Secondary provider: NVIDIA's OpenAI-compatible API.
 def _generate_nvidia_text(prompt: str) -> str:
-    """Call the existing OpenAI-compatible NVIDIA endpoint once."""
+    """Call NVIDIA once; retries are controlled by the shared retry function."""
     if not settings.nvidia_api_key:
         raise ProviderError("not_configured")
 
@@ -238,8 +249,11 @@ def _generate_nvidia_text(prompt: str) -> str:
             max_tokens=1400,
         )
         text = response.choices[0].message.content
-        if not text:
-            raise ProviderError("malformed_response", exception_type="EmptyResponse")
+        if not isinstance(text, str) or not text.strip():
+            raise ProviderError(
+                "malformed_response",
+                exception_type="EmptyResponse",
+            )
         return text
     except ProviderError:
         raise
@@ -257,28 +271,36 @@ def _generate_nvidia_text(prompt: str) -> str:
                 _log_cleanup_failure("NVIDIA", error)
 
 
+# Try Gemini first, then NVIDIA if configured; translate failures to safe codes.
 def _generate_text(prompt: str) -> tuple[str, str]:
-    """Try the primary Gemini key, then NVIDIA, without rotating credentials."""
+    """Generate text using Gemini first and NVIDIA as a fallback."""
     last_error: ProviderError | None = None
+
     if settings.gemini_api_key:
         try:
-            return _generate_with_retries(
-                "Gemini",
-                lambda: _generate_gemini_text(
-                    settings.gemini_api_key,
-                    prompt,
+            return (
+                _generate_with_retries(
+                    "Gemini",
+                    lambda: _generate_gemini_text(
+                        settings.gemini_api_key,
+                        prompt,
+                    ),
                 ),
-            ), "gemini"
+                "gemini",
+            )
         except ProviderError as error:
             last_error = error
             _log_provider_failure("Gemini", error)
 
     if settings.nvidia_api_key:
         try:
-            return _generate_with_retries(
-                "NVIDIA",
-                lambda: _generate_nvidia_text(prompt),
-            ), "nvidia"
+            return (
+                _generate_with_retries(
+                    "NVIDIA",
+                    lambda: _generate_nvidia_text(prompt),
+                ),
+                "nvidia",
+            )
         except ProviderError as error:
             last_error = error
             _log_provider_failure("NVIDIA", error)
@@ -288,23 +310,28 @@ def _generate_text(prompt: str) -> tuple[str, str]:
     if last_error.category == "quota":
         raise RecommendationError("AI_QUOTA_EXCEEDED") from last_error
     if last_error.category == "not_found":
-        raise RecommendationError("AI_RESOURCE_NOT_FOUND")
+        raise RecommendationError("AI_RESOURCE_NOT_FOUND") from last_error
     if last_error.category == "gone":
-        raise RecommendationError("AI_PROVIDER_RESOURCE_GONE")
+        raise RecommendationError("AI_PROVIDER_RESOURCE_GONE") from last_error
     if last_error.category == "authentication":
-        raise RecommendationError("AI_PROVIDER_AUTHENTICATION_FAILED")
+        raise RecommendationError(
+            "AI_PROVIDER_AUTHENTICATION_FAILED"
+        ) from last_error
     if last_error.category == "permission":
-        raise RecommendationError("AI_PROVIDER_PERMISSION_DENIED")
+        raise RecommendationError(
+            "AI_PROVIDER_PERMISSION_DENIED"
+        ) from last_error
     raise RecommendationError("AI_PROVIDERS_UNAVAILABLE") from last_error
 
 
+# Give the model minimal context; keep exact coordinates in backend services.
 def _recommendation_prompt(
     user_prompt: str,
     preferences: UserPreferences,
     weather: dict[str, Any],
     places: list[dict[str, Any]],
 ) -> str:
-    """Build model context without sending user or candidate coordinates."""
+    """Build a prompt using verified candidate IDs, not precise locations."""
     candidate_context = [
         {
             "candidate_id": place["candidate_id"],
@@ -357,11 +384,12 @@ Rules:
 }}"""
 
 
+# Validate model output and construct destinations only from trusted place data.
 def _parse_model_response(
     text: str,
     places: list[dict[str, Any]],
 ) -> tuple[str, list[DestinationMatchItem]]:
-    """Validate model-selected IDs and map output from verified place records."""
+    """Reject invalid model output and map IDs to verified destination records."""
     content = text.strip()
     if content.startswith("```"):
         content = re.sub(
@@ -378,6 +406,7 @@ def _parse_model_response(
 
     if not isinstance(data, dict):
         raise RecommendationError("AI_INVALID_RESPONSE")
+
     summary = data.get("summary")
     raw_recommendations = data.get("recommendations")
     if (
@@ -396,6 +425,7 @@ def _parse_model_response(
     for item in raw_recommendations:
         if not isinstance(item, dict):
             raise RecommendationError("AI_INVALID_RESPONSE")
+
         candidate_id = item.get("candidate_id")
         rationale = item.get("relevance_rationale")
         if (
@@ -408,6 +438,7 @@ def _parse_model_response(
         ):
             raise RecommendationError("AI_INVALID_RESPONSE")
 
+        # The model supplies a candidate ID and rationale, not trusted coordinates.
         candidate = places_by_id[candidate_id]
         selected_ids.add(candidate_id)
         directions_url = "https://www.google.com/maps/dir/?" + urlencode(
@@ -432,15 +463,14 @@ def _parse_model_response(
         )
 
     return summary.strip(), recommendations
-
-
+# Calculate straight-line distance for candidate filtering.
 def _straight_line_distance_meters(
     origin_lat: float,
     origin_lon: float,
     destination_lat: float,
     destination_lon: float,
 ) -> float:
-    """Calculate straight-line distance for deterministic radius filtering."""
+    """Calculate Haversine distance in metres between two coordinates."""
     earth_radius_meters = 6_371_000
     lat1, lat2 = math.radians(origin_lat), math.radians(destination_lat)
     delta_lat = lat2 - lat1
@@ -449,23 +479,26 @@ def _straight_line_distance_meters(
         math.sin(delta_lat / 2) ** 2
         + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2
     )
+
+    # Floating-point rounding can push this value slightly outside [0, 1].
+    haversine = min(1.0, max(0.0, haversine))
     return earth_radius_meters * 2 * math.atan2(
         math.sqrt(haversine),
         math.sqrt(1 - haversine),
     )
-
-
+# Orchestrate weather, place search, AI selection, and transport lookup.
 async def generate_location_recommendations(
     user_prompt: str,
     lat: float,
     lon: float,
     user_preferences: UserPreferences,
 ) -> dict[str, Any]:
-    """Fetch nearby context and rank candidates without exposing origin coordinates."""
+    """Return validated nearby recommendations and transport information."""
     weather = await asyncio.to_thread(get_auckland_weather, lat=lat, lon=lon)
     if weather.get("status") != "success":
         weather = {"status": "unavailable"}
 
+    # Search each requested category concurrently to reduce waiting time.
     place_results = await asyncio.gather(
         *(
             asyncio.to_thread(
@@ -479,6 +512,7 @@ async def generate_location_recommendations(
         )
     )
 
+    # Filter distant results and deduplicate candidates by their stable IDs.
     places_by_id: dict[str, dict[str, Any]] = {}
     for result in place_results:
         if result.get("status") != "success":
@@ -504,6 +538,7 @@ async def generate_location_recommendations(
     if not places:
         raise RecommendationError("LIVE_PLACE_SEARCH_UNAVAILABLE")
 
+    # Limit each category before sending candidates to the model.
     places = sorted(
         (
             place
@@ -525,7 +560,7 @@ async def generate_location_recommendations(
     )
     text, provider = await asyncio.to_thread(_generate_text, prompt)
     summary, recommendations = _parse_model_response(text, places)
-
+    # Only request transport information when at least one destination exists.
     transport = None
     if recommendations:
         first = recommendations[0]
@@ -537,7 +572,6 @@ async def generate_location_recommendations(
             budget=user_preferences.budget,
             transport_mode=user_preferences.transport,
         )
-
     return {
         "summary": summary,
         "recommendations": recommendations,

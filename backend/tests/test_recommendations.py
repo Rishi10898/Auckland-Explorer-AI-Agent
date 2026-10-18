@@ -1,18 +1,18 @@
-"""Test candidate validation, provider order, and privacy-preserving prompts.
 
-Workflow: replace upstream clients with mocks -> exercise provider/selection
-logic -> verify trusted coordinates stay out of AI input and response records.
+"""Test AI provider handling, candidate validation, and prompt privacy.
+
+Workflow: mock AI and external services -> test fallback and selection logic
+-> verify trusted destination data and private coordinates are protected.
 """
 import asyncio
 import json
 import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
-
 from app import ai
 from app.schemas import UserPreferences
 
-
+# Shared test data and a simulated HTTP error.
 def candidate(candidate_id="beach-1"):
     return {
         "candidate_id": candidate_id,
@@ -23,15 +23,12 @@ def candidate(candidate_id="beach-1"):
         "latitude": -36.8485,
         "longitude": 174.77,
     }
-
-
 class ProviderHTTPError(Exception):
     def __init__(self, status_code, message="sensitive response body"):
         super().__init__(message)
         self.status_code = status_code
         self.response = SimpleNamespace(status_code=status_code)
-
-
+# Tests for provider errors, fallback, privacy, and recommendation validation.
 class RecommendationTests(unittest.TestCase):
     def test_provider_http_errors_keep_safe_status_categories(self):
         expected = {
@@ -51,6 +48,7 @@ class RecommendationTests(unittest.TestCase):
                 self.assertEqual(ai._provider_http_status(error), status)
                 self.assertEqual(ai._provider_error_category(error), category)
 
+    # Non-retryable Gemini failures should use the configured NVIDIA fallback.
     def test_not_found_gemini_falls_back_to_nvidia_without_retrying(self):
         settings = SimpleNamespace(
             gemini_api_key="key-one",
@@ -87,13 +85,11 @@ class RecommendationTests(unittest.TestCase):
         with (
             patch.object(ai, "settings", settings),
             patch.object(
-                ai,
-                "_generate_gemini_text",
+                ai, "_generate_gemini_text",
                 side_effect=ai.ProviderError("quota"),
             ) as gemini,
             patch.object(
-                ai,
-                "_generate_nvidia_text",
+                ai, "_generate_nvidia_text",
                 return_value='{"summary":"ok","recommendations":[]}',
             ) as nvidia,
         ):
@@ -111,13 +107,11 @@ class RecommendationTests(unittest.TestCase):
         with (
             patch.object(ai, "settings", settings),
             patch.object(
-                ai,
-                "_generate_gemini_text",
+                ai, "_generate_gemini_text",
                 side_effect=ai.ProviderError("unavailable"),
             ) as gemini,
             patch.object(
-                ai,
-                "_generate_nvidia_text",
+                ai, "_generate_nvidia_text",
                 return_value='{"summary":"ok","recommendations":[]}',
             ) as nvidia,
             patch.object(ai.time, "sleep"),
@@ -136,13 +130,11 @@ class RecommendationTests(unittest.TestCase):
         with (
             patch.object(ai, "settings", settings),
             patch.object(
-                ai,
-                "_generate_gemini_text",
+                ai, "_generate_gemini_text",
                 side_effect=ai.ProviderError("malformed_response"),
             ),
             patch.object(
-                ai,
-                "_generate_nvidia_text",
+                ai, "_generate_nvidia_text",
                 return_value='{"summary":"ok","recommendations":[]}',
             ) as nvidia,
         ):
@@ -151,6 +143,7 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(result[1], "nvidia")
         nvidia.assert_called_once_with("prompt")
 
+    # Logs should record diagnostic categories without leaking secrets.
     def test_provider_failure_logs_status_and_falls_back_without_details(self):
         settings = SimpleNamespace(
             gemini_api_key="key-one",
@@ -166,8 +159,7 @@ class RecommendationTests(unittest.TestCase):
             patch.object(ai, "settings", settings),
             patch.object(ai, "_generate_gemini_text", side_effect=failure),
             patch.object(
-                ai,
-                "_generate_nvidia_text",
+                ai, "_generate_nvidia_text",
                 return_value='{"summary":"ok","recommendations":[]}',
             ),
             self.assertLogs("auckland_explorer.ai", level="WARNING") as logs,
@@ -191,17 +183,13 @@ class RecommendationTests(unittest.TestCase):
         with (
             patch.object(ai, "settings", settings),
             patch.object(
-                ai,
-                "_generate_gemini_text",
+                ai, "_generate_gemini_text",
                 side_effect=ai.ProviderError(
-                    "gone",
-                    exception_type="ClientError",
-                    http_status=410,
+                    "gone", exception_type="ClientError", http_status=410
                 ),
             ) as gemini,
             patch.object(
-                ai,
-                "_generate_nvidia_text",
+                ai, "_generate_nvidia_text",
                 return_value='{"summary":"ok","recommendations":[]}',
             ) as nvidia,
         ):
@@ -219,8 +207,7 @@ class RecommendationTests(unittest.TestCase):
         with (
             patch.object(ai, "settings", settings),
             patch.object(
-                ai,
-                "_generate_gemini_text",
+                ai, "_generate_gemini_text",
                 side_effect=ai.ProviderError("not_found"),
             ),
         ):
@@ -230,16 +217,16 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(error.exception.code, "AI_RESOURCE_NOT_FOUND")
 
     def test_nvidia_gone_response_is_logged_and_reported_safely(self):
-        settings = SimpleNamespace(gemini_api_key="", nvidia_api_key="nvidia-key")
+        settings = SimpleNamespace(
+            gemini_api_key="",
+            nvidia_api_key="nvidia-key",
+        )
         with (
             patch.object(ai, "settings", settings),
             patch.object(
-                ai,
-                "_generate_nvidia_text",
+                ai, "_generate_nvidia_text",
                 side_effect=ai.ProviderError(
-                    "gone",
-                    exception_type="APIStatusError",
-                    http_status=410,
+                    "gone", exception_type="APIStatusError", http_status=410
                 ),
             ),
             self.assertLogs("auckland_explorer.ai", level="WARNING") as logs,
@@ -247,10 +234,7 @@ class RecommendationTests(unittest.TestCase):
             with self.assertRaises(ai.RecommendationError) as error:
                 ai._generate_text("prompt")
 
-        self.assertEqual(
-            error.exception.code,
-            "AI_PROVIDER_RESOURCE_GONE",
-        )
+        self.assertEqual(error.exception.code, "AI_PROVIDER_RESOURCE_GONE")
         joined_logs = "\n".join(logs.output)
         self.assertIn("NVIDIA provider failed", joined_logs)
         self.assertIn("category=gone", joined_logs)
@@ -258,6 +242,7 @@ class RecommendationTests(unittest.TestCase):
         self.assertIn("http_status=410", joined_logs)
         self.assertNotIn("nvidia-key", joined_logs)
 
+    # Verify that private coordinates and addresses are excluded from AI input.
     def test_prompt_excludes_user_and_place_coordinates(self):
         place = candidate()
         prompt = ai._recommendation_prompt(
@@ -273,51 +258,35 @@ class RecommendationTests(unittest.TestCase):
         self.assertIn('"distance_meters": 250', prompt)
         self.assertIn(place["candidate_id"], prompt)
 
+    # Verify Gemini configuration and cleanup without requiring a live API call.
     def test_gemini_client_without_close_method_returns_response(self):
         client = SimpleNamespace(
             interactions=SimpleNamespace(
-                create=Mock(
-                    return_value=SimpleNamespace(
-                        output_text='{"summary":"ok"}'
-                    )
-                )
+                create=Mock(return_value=SimpleNamespace(output_text='{"summary":"ok"}'))
             )
         )
         settings = SimpleNamespace(gemini_model="gemini-3.8-flash")
 
         with (
             patch.object(ai, "settings", settings),
-            patch.object(
-                ai.genai,
-                "Client",
-                return_value=client,
-            ) as create_client,
+            patch.object(ai.genai, "Client", return_value=client) as create_client,
         ):
             text = ai._generate_gemini_text("key", "prompt")
 
         self.assertEqual(text, '{"summary":"ok"}')
-        self.assertEqual(
-            create_client.call_args.kwargs["http_options"].api_version,
-            "v1beta",
-        )
         options = create_client.call_args.kwargs["http_options"]
+        self.assertEqual(options.api_version, "v1beta")
         self.assertEqual(options.retry_options.attempts, 1)
         client.interactions.create.assert_called_once()
         self.assertEqual(
-            client.interactions.create.call_args.kwargs["response_format"][
-                "mime_type"
-            ],
+            client.interactions.create.call_args.kwargs["response_format"]["mime_type"],
             "application/json",
         )
 
     def test_gemini_cleanup_error_does_not_mask_success(self):
         client = SimpleNamespace(
             interactions=SimpleNamespace(
-                create=Mock(
-                    return_value=SimpleNamespace(
-                        output_text='{"summary":"ok"}'
-                    )
-                )
+                create=Mock(return_value=SimpleNamespace(output_text='{"summary":"ok"}'))
             ),
             close=Mock(side_effect=RuntimeError("sensitive cleanup detail")),
         )
@@ -338,9 +307,7 @@ class RecommendationTests(unittest.TestCase):
     def test_gemini_cleanup_error_does_not_mask_provider_failure(self):
         provider_error = ProviderHTTPError(403)
         client = SimpleNamespace(
-            interactions=SimpleNamespace(
-                create=Mock(side_effect=provider_error)
-            ),
+            interactions=SimpleNamespace(create=Mock(side_effect=provider_error)),
             close=Mock(side_effect=RuntimeError("sensitive cleanup detail")),
         )
         settings = SimpleNamespace(gemini_model="gemini-3.8-flash")
@@ -359,6 +326,7 @@ class RecommendationTests(unittest.TestCase):
         self.assertIs(error.exception.__cause__, provider_error)
         self.assertNotIn("sensitive response body", str(error.exception))
 
+    # Model output must use verified candidates and contain valid content.
     def test_model_cannot_add_unknown_or_duplicate_candidates(self):
         place = candidate()
         invalid_responses = (
@@ -388,7 +356,6 @@ class RecommendationTests(unittest.TestCase):
                 json.dumps({"summary": "  ", "recommendations": []}),
                 [candidate()],
             )
-
         self.assertEqual(error.exception.code, "AI_INVALID_RESPONSE")
 
     def test_output_uses_verified_place_name_and_coordinates(self):
@@ -416,6 +383,7 @@ class RecommendationTests(unittest.TestCase):
         self.assertEqual(recommendations[0].distance_meters, 250)
         self.assertTrue(str(recommendations[0].directions_url).startswith("https://"))
 
+    # Check candidate limits, concurrent service mocking, and prompt privacy.
     def test_location_lookup_is_capped_and_origin_is_not_in_prompt(self):
         place = candidate()
         captured = {}
@@ -439,19 +407,16 @@ class RecommendationTests(unittest.TestCase):
 
         with (
             patch.object(
-                ai,
-                "get_auckland_weather",
+                ai, "get_auckland_weather",
                 return_value={"status": "success", "condition": "Clear"},
             ),
             patch.object(
-                ai,
-                "get_auckland_places",
+                ai, "get_auckland_places",
                 return_value={"status": "success", "places": [place]},
             ) as place_search,
             patch.object(ai, "_generate_text", side_effect=generate_text),
             patch.object(
-                ai,
-                "get_transport_info",
+                ai, "get_transport_info",
                 new=AsyncMock(return_value={"mode": "walk"}),
             ),
         ):
@@ -475,11 +440,7 @@ class RecommendationTests(unittest.TestCase):
 
     def test_prompt_uses_at_most_five_candidates_per_category(self):
         preferences = UserPreferences(
-            categories=[
-                "BEACH",
-                "PARK_RECREATION_AREA",
-                "TOURIST_ATTRACTION",
-            ]
+            categories=["BEACH", "PARK_RECREATION_AREA", "TOURIST_ATTRACTION"]
         )
         candidates_by_category = {
             category: [
@@ -527,20 +488,11 @@ class RecommendationTests(unittest.TestCase):
             }
 
         with (
-            patch.object(
-                ai,
-                "get_auckland_weather",
-                return_value={"status": "unavailable"},
-            ),
-            patch.object(
-                ai,
-                "get_auckland_places",
-                side_effect=search_places,
-            ) as place_search,
+            patch.object(ai, "get_auckland_weather", return_value={"status": "unavailable"}),
+            patch.object(ai, "get_auckland_places", side_effect=search_places) as place_search,
             patch.object(ai, "_generate_text", side_effect=generate_text),
             patch.object(
-                ai,
-                "get_transport_info",
+                ai, "get_transport_info",
                 new=AsyncMock(return_value={"mode": "walk"}),
             ),
         ):
@@ -552,7 +504,6 @@ class RecommendationTests(unittest.TestCase):
                     user_preferences=preferences,
                 )
             )
-
         self.assertEqual(result["provider"], "gemini")
         self.assertEqual(place_search.call_count, 3)
         self.assertEqual(len(captured["candidates"]), 15)
@@ -565,7 +516,5 @@ class RecommendationTests(unittest.TestCase):
                     ),
                     ai.MAX_CANDIDATES_PER_CATEGORY,
                 )
-
-
 if __name__ == "__main__":
     unittest.main()
