@@ -1,4 +1,3 @@
-
 """Coordinate trusted context and provider-backed destination selection.
 
 Workflow: weather/place lookup -> minimal candidate prompt -> Gemini ->
