@@ -155,7 +155,7 @@ def _generate_gemini_text(api_key: str, prompt: str) -> str:
         client = genai.Client(
             api_key=api_key,
             http_options=types.HttpOptions(
-                api_version="v1beta",
+                api_version="v1",
                 timeout=MODEL_TIMEOUT_MS,
                 retry_options=types.HttpRetryOptions(attempts=1),
             ),
