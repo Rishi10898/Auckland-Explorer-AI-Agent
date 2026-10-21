@@ -26,13 +26,15 @@ services:
     name: auckland-explorer-ai-agent-staging
     runtime: python
     plan: free
-    region: singapore
+    region: Virginia (US East)
     rootDir: .
     buildCommand: pip install -r backend/app/requirements.txt
     startCommand: uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port $PORT
     envVars:
       - key: FRONTEND_DIR
         value: frontend
+      - key: BACKEND_DIR
+        value: backend
       - key: GEMINI_API_KEY_1
         sync: false
       - key: GEMINI_MODEL
