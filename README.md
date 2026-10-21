@@ -26,7 +26,7 @@ Use Python 3.11+ and install the pinned/ranged backend dependencies:
 ```powershell
 Set-Location backend
 python -m pip install -r app/requirements.txt
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --log-level info
+python -m uvicorn app.main:app --reload
 ```
 
 Run these commands from the `backend` directory. Open `http://127.0.0.1:8000/chat.html` (not a `file://` page) so the browser uses the local API. Each submitted chat request logs a received and completed line in the terminal, but intentionally does not log the prompt or coordinates. `/`, `/docs`, and `/health` are also available. A successful `/health` check does not verify provider credentials; use a real chat request to confirm the displayed provider.
