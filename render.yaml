@@ -7,7 +7,7 @@ services:
     plan: free
     region: singapore
     rootDir: backend
-    buildCommand: pip install -r app/requirements.txt
+    buildCommand: pip install -r backend/app/requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GEMINI_API_KEY_1
